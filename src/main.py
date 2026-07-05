@@ -12,6 +12,7 @@ from src.dart_client import get_recent_disclosures_for_stocks
 from src.html_report import build_html_report
 from src.kakao_client import send_summary
 from src.kr_stocks import fetch_all_kr_stocks
+from src.news_client import get_recent_news_for_tickers
 from src.report import build_kakao_summary, build_report_sections
 from src.sec_client import get_recent_filings_for_tickers
 from src.us_stocks import fetch_all_us_stocks, fetch_indices
@@ -60,6 +61,9 @@ def main() -> None:
         list(US_STOCKS.keys()), DISCLOSURE_LOOKBACK_DAYS
     )
 
+    logger.info("Yahoo Finance / Seeking Alpha 뉴스 조회 중...")
+    us_news = get_recent_news_for_tickers(list(US_STOCKS.keys()))
+
     dart_api_key = os.environ.get("DART_API_KEY")
     if dart_api_key:
         logger.info("DART 공시 조회 중...")
@@ -72,7 +76,9 @@ def main() -> None:
 
     DOCS_DIR.mkdir(exist_ok=True)
     (DOCS_DIR / "index.html").write_text(
-        build_html_report(kr_stocks, us_stocks, indices, kr_disclosures, us_filings),
+        build_html_report(
+            kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news
+        ),
         encoding="utf-8",
     )
     logger.info("HTML 리포트 생성 완료: %s", DOCS_DIR / "index.html")

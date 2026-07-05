@@ -7,6 +7,7 @@ from typing import List
 from config import MA_WINDOWS, RSI_PERIOD
 from src.indicators import moving_average_diff, rsi, volume_change_pct
 from src.models import MarketItem
+from src.signal import trading_signal
 
 
 def _format_price(item: MarketItem) -> str:
@@ -49,6 +50,7 @@ def format_item(item: MarketItem) -> str:
         _format_ma_line(item),
         f"RSI({RSI_PERIOD}) {rsi_text}",
         _format_volume_line(item),
+        trading_signal(item),
     ]
     return "\n".join(lines)
 

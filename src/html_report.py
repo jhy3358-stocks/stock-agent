@@ -8,6 +8,7 @@ from typing import Dict, List
 from config import MA_WINDOWS, RSI_PERIOD
 from src.indicators import moving_average_diff, rsi, volume_change_pct
 from src.models import MarketItem
+from src.signal import trading_signal
 
 DisclosureMap = Dict[str, List[dict]]
 
@@ -58,7 +59,23 @@ def _disclosures_html(disclosures: List[dict]) -> str:
       </div>"""
 
 
-def _item_card(item: MarketItem, disclosures: List[dict]) -> str:
+def _news_html(news: List[dict]) -> str:
+    if not news:
+        return ""
+    items = "\n".join(
+        f'<li><a href="{html.escape(n["url"])}" target="_blank" rel="noopener">'
+        f'[{html.escape(n["source"])}] {html.escape(n["title"])}</a></li>'
+        for n in news
+        if n.get("url")
+    )
+    return f"""
+      <div class="disclosures">
+        <div class="disclosures-title">관련 뉴스</div>
+        <ul>{items}</ul>
+      </div>"""
+
+
+def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> str:
     direction = "up" if item.change_pct >= 0 else "down"
     rsi_value = rsi(item.close, RSI_PERIOD)
     rsi_text = f"{rsi_value:.1f}" if rsi_value is not None else "데이터부족"
@@ -69,13 +86,21 @@ def _item_card(item: MarketItem, disclosures: List[dict]) -> str:
       <div class="row">{_ma_text(item)}</div>
       <div class="row">RSI({RSI_PERIOD}) {rsi_text}</div>
       <div class="row">{_volume_text(item)}</div>
+      <div class="row">{trading_signal(item)}</div>
       {_disclosures_html(disclosures)}
+      {_news_html(news)}
     </div>"""
 
 
-def _section(title: str, items: List[MarketItem], disclosures_map: DisclosureMap) -> str:
+def _section(
+    title: str,
+    items: List[MarketItem],
+    disclosures_map: DisclosureMap,
+    news_map: DisclosureMap,
+) -> str:
     cards = "\n".join(
-        _item_card(item, disclosures_map.get(item.symbol, [])) for item in items
+        _item_card(item, disclosures_map.get(item.symbol, []), news_map.get(item.symbol, []))
+        for item in items
     )
     return f"""
     <section>
@@ -90,15 +115,17 @@ def build_html_report(
     indices: List[MarketItem],
     kr_disclosures: DisclosureMap = None,
     us_filings: DisclosureMap = None,
+    us_news: DisclosureMap = None,
 ) -> str:
     date_str = dt.date.today().strftime("%Y-%m-%d")
     kr_disclosures = kr_disclosures or {}
     us_filings = us_filings or {}
+    us_news = us_news or {}
     sections = "\n".join(
         [
-            _section("주요 지수", indices, {}),
-            _section("국내 종목", kr_stocks, kr_disclosures),
-            _section("미국 종목", us_stocks, us_filings),
+            _section("주요 지수", indices, {}, {}),
+            _section("국내 종목", kr_stocks, kr_disclosures, {}),
+            _section("미국 종목", us_stocks, us_filings, us_news),
         ]
     )
     return f"""<!doctype html>

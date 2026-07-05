@@ -11,9 +11,11 @@
     yfinance(`^KS11`, `^IXIC`, `^GSPC`)로 수집합니다. 개별 국내 종목은 pykrx를 그대로 사용합니다.
 - `src/indicators.py` — 이동평균(5/20/60일), RSI(14일), 거래량 증감 계산
 - `src/report.py` — 콘솔용 전체 리포트 텍스트 + 카카오톡 요약 메시지(200자 이내) 생성
-- `src/html_report.py` — GitHub Pages에 게시할 전체 상세 리포트 HTML 페이지 생성 (종목별 최근 공시 포함)
+- `src/html_report.py` — GitHub Pages에 게시할 전체 상세 리포트 HTML 페이지 생성 (공시/뉴스/의견 코멘트 포함)
 - `src/dart_client.py` — 국내 종목 최근 공시 수집 (OpenDART Open API, 무료 인증키 필요)
 - `src/sec_client.py` — 미국 종목 최근 공시 수집 (SEC EDGAR, API 키 불필요)
+- `src/news_client.py` — 미국 종목 관련 뉴스 수집 (Yahoo Finance `yfinance.news`, Seeking Alpha 공개 RSS — 둘 다 로그인 불필요)
+- `src/signal.py` — RSI/이동평균을 조합한 규칙 기반 매수/매도 관점 코멘트 (애널리스트 의견 아님, 참고용)
 - `src/kakao_client.py` — 카카오톡 "나에게 보내기" 발송 (REST API 직접 호출)
 - `src/main.py` — 전체 파이프라인 실행 진입점
 - `scripts/kakao_auth_setup.py` — 최초 1회 실행하는 카카오 OAuth 인증 스크립트
