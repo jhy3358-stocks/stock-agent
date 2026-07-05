@@ -1,0 +1,6 @@
+pykrx
+yfinance
+pandas
+numpy
+requests
+python-dotenv

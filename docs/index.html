@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주식 리포트 2026-07-05</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280;
+    --card-bg: #f7f7f8; --up: #d1373f; --down: #1a63d1; --border: #e5e7eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14161a; --fg: #e8e8ea; --muted: #9a9ba3; --card-bg: #1d2026; --border: #2a2d34; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 60px; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .updated { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+  h2 { font-size: 1.05rem; margin: 28px 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .card-title { font-weight: 600; margin-bottom: 6px; }
+  .symbol { color: var(--muted); font-weight: 400; font-size: .85rem; }
+  .price { font-size: 1.1rem; margin-bottom: 8px; }
+  .card.up .change { color: var(--up); }
+  .card.down .change { color: var(--down); }
+  .row { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>주식 리포트</h1>
+  <div class="updated">2026-07-05 기준</div>
+  
+    <section>
+      <h2>주요 지수</h2>
+      <div class="grid">
+    <div class="card up">
+      <div class="card-title">코스피 <span class="symbol">(^KS11)</span></div>
+      <div class="price">8,088.34pt <span class="change">(+5.76%)</span></div>
+      <div class="row">MA5 아래 (-1.1%) / MA20 아래 (-3.4%) / MA60 위 (+7.3%)</div>
+      <div class="row">RSI(14) 48.3</div>
+      <div class="row">거래량 465,800 (전일대비 -7.8%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">나스닥 <span class="symbol">(^IXIC)</span></div>
+      <div class="price">25,832.67pt <span class="change">(-0.80%)</span></div>
+      <div class="row">MA5 아래 (-0.0%) / MA20 아래 (-0.3%) / MA60 위 (+1.2%)</div>
+      <div class="row">RSI(14) 49.0</div>
+      <div class="row">거래량 9,529,580,000 (전일대비 +4.8%)</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">S&P500 <span class="symbol">(^GSPC)</span></div>
+      <div class="price">7,483.24pt <span class="change">(+0.00%)</span></div>
+      <div class="row">MA5 위 (+0.4%) / MA20 위 (+0.7%) / MA60 위 (+2.2%)</div>
+      <div class="row">RSI(14) 54.7</div>
+      <div class="row">거래량 5,463,520,000 (전일대비 -5.5%)</div>
+    </div></div>
+    </section>
+
+    <section>
+      <h2>국내 종목</h2>
+      <div class="grid">
+    <div class="card up">
+      <div class="card-title">삼성전자 <span class="symbol">(005930)</span></div>
+      <div class="price">309,500원 <span class="change">(+8.22%)</span></div>
+      <div class="row">MA5 아래 (-1.2%) / MA20 아래 (-5.5%) / MA60 위 (+9.9%)</div>
+      <div class="row">RSI(14) 48.1</div>
+      <div class="row">거래량 31,498,600 (전일대비 -19.0%)</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">SK하이닉스 <span class="symbol">(000660)</span></div>
+      <div class="price">2,425,000원 <span class="change">(+10.88%)</span></div>
+      <div class="row">MA5 아래 (-2.6%) / MA20 아래 (-1.3%) / MA60 위 (+28.7%)</div>
+      <div class="row">RSI(14) 51.6</div>
+      <div class="row">거래량 7,951,599 (전일대비 +3.5%)</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">현대차 <span class="symbol">(005380)</span></div>
+      <div class="price">492,000원 <span class="change">(+2.07%)</span></div>
+      <div class="row">MA5 위 (+0.3%) / MA20 아래 (-12.5%) / MA60 아래 (-15.9%)</div>
+      <div class="row">RSI(14) 34.9</div>
+      <div class="row">거래량 968,294 (전일대비 -22.7%)</div>
+    </div></div>
+    </section>
+
+    <section>
+      <h2>미국 종목</h2>
+      <div class="grid">
+    <div class="card up">
+      <div class="card-title">애플 <span class="symbol">(AAPL)</span></div>
+      <div class="price">$308.63 <span class="change">(+4.84%)</span></div>
+      <div class="row">MA5 위 (+5.8%) / MA20 위 (+4.7%) / MA60 위 (+7.0%)</div>
+      <div class="row">RSI(14) 60.3</div>
+      <div class="row">거래량 75,352,800 (전일대비 +50.2%)</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">아마존닷컴 <span class="symbol">(AMZN)</span></div>
+      <div class="price">$242.67 <span class="change">(+0.40%)</span></div>
+      <div class="row">MA5 위 (+1.5%) / MA20 위 (+1.0%) / MA60 아래 (-4.2%)</div>
+      <div class="row">RSI(14) 48.7</div>
+      <div class="row">거래량 48,246,400 (전일대비 -10.4%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">브로드컴 <span class="symbol">(AVGO)</span></div>
+      <div class="price">$360.45 <span class="change">(-2.41%)</span></div>
+      <div class="row">MA5 아래 (-2.3%) / MA20 아래 (-6.1%) / MA60 아래 (-10.9%)</div>
+      <div class="row">RSI(14) 39.7</div>
+      <div class="row">거래량 26,749,500 (전일대비 +12.8%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">알파벳 A <span class="symbol">(GOOGL)</span></div>
+      <div class="price">$359.91 <span class="change">(-0.36%)</span></div>
+      <div class="row">MA5 위 (+1.7%) / MA20 위 (+0.4%) / MA60 아래 (-1.1%)</div>
+      <div class="row">RSI(14) 49.5</div>
+      <div class="row">거래량 25,974,800 (전일대비 -2.8%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">메타 플랫폼스 <span class="symbol">(META)</span></div>
+      <div class="price">$582.90 <span class="change">(-4.90%)</span></div>
+      <div class="row">MA5 위 (+1.5%) / MA20 위 (+1.1%) / MA60 아래 (-4.9%)</div>
+      <div class="row">RSI(14) 49.7</div>
+      <div class="row">거래량 21,705,900 (전일대비 -52.3%)</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">마이크로소프트 <span class="symbol">(MSFT)</span></div>
+      <div class="price">$390.49 <span class="change">(+1.62%)</span></div>
+      <div class="row">MA5 위 (+3.3%) / MA20 위 (+0.9%) / MA60 아래 (-3.8%)</div>
+      <div class="row">RSI(14) 49.9</div>
+      <div class="row">거래량 42,128,900 (전일대비 -12.4%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">엔비디아 <span class="symbol">(NVDA)</span></div>
+      <div class="price">$194.83 <span class="change">(-1.39%)</span></div>
+      <div class="row">MA5 아래 (-0.6%) / MA20 아래 (-4.3%) / MA60 아래 (-5.9%)</div>
+      <div class="row">RSI(14) 41.2</div>
+      <div class="row">거래량 142,068,700 (전일대비 -2.8%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">테슬라 <span class="symbol">(TSLA)</span></div>
+      <div class="price">$393.45 <span class="change">(-7.49%)</span></div>
+      <div class="row">MA5 아래 (-3.1%) / MA20 아래 (-1.4%) / MA60 아래 (-1.8%)</div>
+      <div class="row">RSI(14) 46.8</div>
+      <div class="row">거래량 73,717,700 (전일대비 +83.7%)</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">마이크론 <span class="symbol">(MU)</span></div>
+      <div class="price">$975.56 <span class="change">(-5.49%)</span></div>
+      <div class="row">MA5 아래 (-10.3%) / MA20 아래 (-6.5%) / MA60 위 (+24.5%)</div>
+      <div class="row">RSI(14) 48.5</div>
+      <div class="row">거래량 61,316,900 (전일대비 +19.5%)</div>
+    </div></div>
+    </section>
+</body>
+</html>
