@@ -1,0 +1,1318 @@
+================================================================================
+FILE: 주식에이전트팀_요구사항-2.md
+================================================================================
+# 주식 에이전트팀 — 프로젝트 요구사항
+
+## 1. 목적
+매일 아침 국내/미국 주식 및 주요 지수에 대한 기술적 분석 리포트를 자동 생성하여 카카오톡으로 발송한다.
+
+## 2. 추적 대상
+
+### 국내 종목 (종목코드)
+| 종목명 | 코드 |
+|---|---|
+| 삼성전자 | 005930 |
+| SK하이닉스 | 000660 |
+| 현대차 | 005380 |
+
+### 미국 종목 (티커)
+| 종목명 | 티커 |
+|---|---|
+| 애플 | AAPL |
+| 아마존닷컴 | AMZN |
+| 브로드컴 | AVGO |
+| 알파벳 A | GOOGL |
+| 메타 플랫폼스 | META |
+| 마이크로소프트 | MSFT |
+| 엔비디아 | NVDA |
+| 테슬라 | TSLA |
+| 마이크론 | MU |
+
+### 지수
+- 코스피 (KOSPI)
+- 나스닥 (NASDAQ)
+- S&P500
+
+## 3. 리포트 내용
+각 종목/지수별로 다음 정보를 포함한다:
+- 현재가 및 등락률
+- 이동평균선 (5일, 20일, 60일) 대비 위치
+- RSI (14일 기준)
+- 거래량 (전일 대비 증감)
+
+## 4. 데이터 소스 (무료)
+- **국내 종목/지수**: `pykrx` 라이브러리
+- **미국 종목/지수**: `yfinance` 라이브러리
+- (참고용, 우선순위 낮음) 뉴스 요약: 추후 확장 시 네이버 뉴스 검색 API 고려
+
+## 5. 발송 방식
+- **채널**: 카카오톡 "나에게 보내기" API (Kakao Developers, 무료/검수 불필요)
+- **인증**: 최초 1회 OAuth 로그인으로 refresh token 발급 후 저장, 이후 자동 갱신
+- **라이브러리**: `PyKakao` 또는 직접 REST API 호출
+
+## 6. 실행 스케줄
+- **시간**: 매일 오전 6~7시 (미국장 마감 후, KST 기준)
+- **실행 환경**: GitHub Actions (cron 스케줄, PC 상시 구동 불필요)
+
+## 7. 아키텍처
+
+```
+[GitHub Actions 스케줄 트리거 - 매일 06:00 KST]
+        │
+   ┌────┴────┬──────────┐
+데이터수집   기술지표계산  (국내: pykrx / 해외: yfinance)
+ 에이전트    에이전트
+        │
+   리포트 텍스트 생성
+        │
+   카카오톡 "나에게 보내기" 발송
+```
+
+## 8. 개발 순서 (제안)
+1. 카카오 "나에게 보내기" 인증 및 발송 스크립트 단독 완성 (refresh token 발급/저장 포함)
+2. 국내 종목 데이터 수집 함수 (pykrx)
+3. 해외 종목 데이터 수집 함수 (yfinance)
+4. 지수 데이터 수집 함수
+5. 기술적 지표 계산 모듈 (이동평균, RSI, 거래량 비교)
+6. 리포트 텍스트 포맷팅
+7. 전체 파이프라인 연결 및 로컬 테스트
+8. GitHub Actions 워크플로우 작성 및 스케줄 등록 (secrets에 카카오 토큰 저장)
+
+## 9. 향후 확장 아이디어 (미확정, 참고용)
+- 뉴스/공시 요약 추가
+- MACD, 볼린저밴드 등 추가 지표
+- 매수/매도 의견 코멘트
+
+
+================================================================================
+FILE: README.md
+================================================================================
+# 주식 에이전트팀
+
+매일 아침 국내/미국 주요 종목·지수의 기술적 분석 리포트를 자동 생성해 카카오톡 "나에게 보내기"로 발송합니다.
+(요구사항 원문: `주식에이전트팀_요구사항-2.md`)
+
+## 구성
+- `config.py` — 추적 대상 종목/지수 정의
+- `src/kr_stocks.py` — 국내 종목 데이터 수집 (pykrx)
+- `src/us_stocks.py` — 미국 종목 및 지수(코스피/나스닥/S&P500) 데이터 수집 (yfinance)
+  - 참고: pykrx의 코스피 지수 조회 API가 KRX 서버 세션 문제로 현재 불안정하여, 지수는 코스피 포함 전부
+    yfinance(`^KS11`, `^IXIC`, `^GSPC`)로 수집합니다. 개별 국내 종목은 pykrx를 그대로 사용합니다.
+- `src/indicators.py` — 이동평균(5/20/60일), RSI(14일), 거래량 증감 계산
+- `src/report.py` — 콘솔용 전체 리포트 텍스트 + 카카오톡 요약 메시지(200자 이내) 생성
+- `src/html_report.py` — GitHub Pages에 게시할 전체 상세 리포트 HTML 페이지 생성 (공시/뉴스/의견 코멘트 포함)
+- `src/dart_client.py` — 국내 종목 최근 공시 수집 (OpenDART Open API, 무료 인증키 필요)
+- `src/sec_client.py` — 미국 종목 최근 공시 수집 (SEC EDGAR, API 키 불필요)
+- `src/news_client.py` — 미국 종목 관련 뉴스 수집 (Yahoo Finance `yfinance.news`, Seeking Alpha 공개 RSS — 둘 다 로그인 불필요)
+- `src/signal.py` — RSI/이동평균을 조합한 규칙 기반 매수/매도 관점 코멘트 (애널리스트 의견 아님, 참고용)
+- `src/kakao_client.py` — 카카오톡 "나에게 보내기" 발송 (REST API 직접 호출)
+- `src/main.py` — 전체 파이프라인 실행 진입점
+- `scripts/kakao_auth_setup.py` — 최초 1회 실행하는 카카오 OAuth 인증 스크립트
+- `.github/workflows/daily_report.yml` — 매일 06:00 KST 자동 실행 (GitHub Actions)
+
+## 발송 방식
+
+카카오톡 기본 텍스트 템플릿은 1건당 200자 제한이 있어 15개 종목의 상세 내용을 다 담을 수 없습니다.
+그래서 카카오톡에는 **지수 등락률 + 상승/하락 상위 종목 요약 메시지 1건**만 보내고, 종목별 상세(현재가/이동평균/RSI/거래량)는
+`docs/index.html`로 생성해 **GitHub Pages**에 자동 게시한 뒤 그 URL을 요약 메시지 본문에 텍스트로 포함시킵니다.
+(카카오 앱이 메시지 API 검수 전에는 템플릿의 `button_title`/`link` 버튼이 렌더링되지 않아, 대신 카카오톡이
+자동으로 링크화하는 일반 URL 텍스트를 본문에 직접 넣는 방식을 사용합니다.)
+
+## 1. 로컬 환경 설정
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+## 2. 카카오 디벨로퍼스 앱 생성 (최초 1회, 사용자가 직접 진행)
+
+1. https://developers.kakao.com 접속 → 로그인 → **내 애플리케이션** → **애플리케이션 추가하기**
+2. 앱 생성 후 **앱 키** 메뉴에서 **REST API 키** 복사 → `.env`의 `KAKAO_REST_API_KEY`에 붙여넣기
+3. **카카오 로그인** 메뉴에서 활성화 ON
+4. **카카오 로그인 > Redirect URI**에 다음 URL 등록 (카카오에서 제공하는 테스트용 리다이렉트, 별도 서버 불필요):
+   `https://developers.kakao.com/tool/oauth`
+5. **카카오 로그인 > 동의항목**에서 "카카오톡 메시지 전송" 항목을 **필수 동의**로 설정
+   (scope 이름: `talk_message` — "나에게 보내기"는 별도 검수 없이 바로 사용 가능)
+6. `.env`의 `KAKAO_REDIRECT_URI`가 4번 값과 동일한지 확인 (기본값 그대로 사용해도 무방)
+
+## 3. refresh_token 발급 (최초 1회)
+
+```bash
+python scripts/kakao_auth_setup.py
+```
+
+- 출력된 인가 URL을 브라우저에서 열고 로그인/동의
+- 리다이렉트된 페이지 URL의 `code=` 뒤 값을 복사해 터미널에 붙여넣기
+- 발급된 `refresh_token`이 `.kakao_token.json`에 저장되고, GitHub Secrets에 등록할 값이 콘솔에 출력됨
+- 로컬 테스트를 위해 `.env`의 `KAKAO_REFRESH_TOKEN`에도 같은 값을 채워두면 4번 단계에서 실제 발송까지 확인 가능
+
+## 3-1. DART 인증키 발급 (국내 공시 조회용, 선택)
+
+1. https://opendart.fss.or.kr 회원가입/로그인
+2. **인증키 신청/관리** 메뉴에서 인증키 발급 신청 (즉시 무료 발급)
+3. 발급된 인증키를 `.env`의 `DART_API_KEY`에 붙여넣기
+
+키가 없어도 파이프라인은 정상 동작하며, 이 경우 국내 종목 공시만 생략됩니다 (미국 SEC 공시는 키 없이 항상 조회됨).
+
+## 4. 로컬 테스트
+
+```bash
+python -m src.main
+```
+
+- `.env`에 카카오 값이 없으면 리포트를 콘솔에만 출력하고 발송은 건너뜁니다 (데이터 수집/지표 계산 검증용)
+- `.env`에 `KAKAO_REST_API_KEY`, `KAKAO_REFRESH_TOKEN`을 모두 채우면 실제로 카카오톡 요약 메시지 발송까지 수행합니다
+- 실행할 때마다 `docs/index.html`이 갱신됩니다 (상세 리포트 페이지)
+- 로컬에서 카카오톡 메시지에 실제 GitHub Pages 링크를 넣어보고 싶다면 `.env`에 `REPORT_PAGE_URL`을 추가하세요
+  (5번에서 Pages를 활성화한 뒤의 URL). 비워두면 임시로 `https://github.com`이 사용됩니다.
+
+## 5. GitHub 저장소 연결, Pages 활성화, 스케줄 등록
+
+1. GitHub에 새 저장소 생성 후 본 프로젝트를 push
+2. 저장소 **Settings > Secrets and variables > Actions**에서 Secret 추가:
+   - `KAKAO_REST_API_KEY`
+   - `KAKAO_REFRESH_TOKEN`
+   - `DART_API_KEY` (선택 — 없으면 국내 공시 조회만 생략됨)
+3. 저장소 **Settings > Pages**에서 Source를 **Deploy from a branch**로 설정하고,
+   Branch는 `main` / 폴더는 `/docs`로 지정 후 저장
+   - 최초 1회는 `docs/index.html`이 존재해야 폴더 선택지가 나타납니다. 로컬에서 `python -m src.main`을
+     한 번 실행해 `docs/index.html`을 생성한 뒤 커밋/push하면 됩니다
+   - 활성화 후 나오는 Pages URL(`https://<계정>.github.io/<저장소명>/`)이 상세 리포트 페이지 주소입니다
+     (GitHub Actions에서는 `GITHUB_REPOSITORY` 값으로 이 URL을 자동으로 계산하므로 별도 등록이 필요 없습니다)
+4. **Actions** 탭에서 `Daily Stock Report` 워크플로우 확인
+   - 매일 06:00 KST(UTC 21:00) 자동 실행 — 데이터 수집 → `docs/index.html` 갱신 후 자동 커밋/push →
+     카카오톡 요약 메시지 발송
+   - `workflow_dispatch`로 수동 실행 테스트 가능
+
+## 참고: refresh_token 만료
+
+카카오 `refresh_token`은 발급 후 약 60일간 유효합니다. 액세스 토큰 갱신 시 카카오가 새 `refresh_token`을
+함께 내려주는 경우, 실행 로그에 경고가 남습니다 — 이 경우 GitHub Secret의 `KAKAO_REFRESH_TOKEN` 값을
+수동으로 갱신해야 합니다. 완전히 만료된 경우 `scripts/kakao_auth_setup.py`를 다시 실행해 재발급받으세요.
+
+
+================================================================================
+FILE: requirements.txt
+================================================================================
+pykrx
+yfinance
+pandas
+numpy
+requests
+python-dotenv
+
+
+================================================================================
+FILE: config.py
+================================================================================
+"""추적 대상 종목 및 지수 정의."""
+
+KR_STOCKS = {
+    "005930": "삼성전자",
+    "000660": "SK하이닉스",
+    "005380": "현대차",
+}
+
+US_STOCKS = {
+    "AAPL": "애플",
+    "AMZN": "아마존닷컴",
+    "AVGO": "브로드컴",
+    "GOOGL": "알파벳 A",
+    "META": "메타 플랫폼스",
+    "MSFT": "마이크로소프트",
+    "NVDA": "엔비디아",
+    "TSLA": "테슬라",
+    "MU": "마이크론",
+}
+
+# pykrx의 코스피 지수 조회 엔드포인트가 KRX 서버 세션 이슈로 불안정하여,
+# 지수는 KOSPI 포함 전부 yfinance로 수집한다 (개별 국내 종목은 pykrx 그대로 사용).
+INDICES = {
+    "^KS11": "코스피",
+    "^IXIC": "나스닥",
+    "^GSPC": "S&P500",
+}
+
+MA_WINDOWS = (5, 20, 60)
+RSI_PERIOD = 14
+
+# 지표 계산에 필요한 최소 거래일 확보를 위해 넉넉히 조회
+HISTORY_DAYS = 200
+
+# DART corpCode.xml(수 MB)을 매일 다운로드/파싱하지 않도록, OpenDART API로 조회해
+# 확인한 고유번호를 고정값으로 저장해둔다 (종목코드-corp_code 매핑은 사실상 불변).
+KR_DART_CORP_CODES = {
+    "005930": "00126380",  # 삼성전자
+    "000660": "00164779",  # SK하이닉스
+    "005380": "00164742",  # 현대차(현대자동차)
+}
+
+# 공시/공시 조회 기간 (일)
+DISCLOSURE_LOOKBACK_DAYS = 7
+
+
+================================================================================
+FILE: src/models.py
+================================================================================
+"""공통 데이터 모델."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+import pandas as pd
+
+
+@dataclass
+class MarketItem:
+    name: str
+    symbol: str
+    market: str  # "KR" | "US" | "INDEX"
+    close: pd.Series
+    volume: Optional[pd.Series]
+    current_price: float
+    change_pct: float
+    unit: str  # "원" | "$" | "pt"
+
+
+================================================================================
+FILE: src/kr_stocks.py
+================================================================================
+"""국내 종목 및 코스피 지수 데이터 수집 (pykrx)."""
+from __future__ import annotations
+
+import datetime as dt
+
+from pykrx import stock
+
+from config import HISTORY_DAYS, KR_STOCKS
+from src.models import MarketItem
+
+
+def _date_range() -> tuple[str, str]:
+    today = dt.date.today()
+    fromdate = (today - dt.timedelta(days=HISTORY_DAYS)).strftime("%Y%m%d")
+    todate = today.strftime("%Y%m%d")
+    return fromdate, todate
+
+
+def fetch_kr_stock(code: str, name: str) -> MarketItem:
+    fromdate, todate = _date_range()
+    df = stock.get_market_ohlcv_by_date(fromdate, todate, code)
+    df = df[df["종가"] > 0]
+    close = df["종가"]
+    volume = df["거래량"]
+    current_price = float(close.iloc[-1])
+    prev_price = float(close.iloc[-2])
+    change_pct = (current_price - prev_price) / prev_price * 100
+    return MarketItem(
+        name=name,
+        symbol=code,
+        market="KR",
+        close=close,
+        volume=volume,
+        current_price=current_price,
+        change_pct=change_pct,
+        unit="원",
+    )
+
+
+def fetch_all_kr_stocks() -> list[MarketItem]:
+    return [fetch_kr_stock(code, name) for code, name in KR_STOCKS.items()]
+
+
+================================================================================
+FILE: src/us_stocks.py
+================================================================================
+"""미국 종목 및 나스닥/S&P500 지수 데이터 수집 (yfinance)."""
+from __future__ import annotations
+
+import yfinance as yf
+
+from config import INDICES, US_STOCKS
+from src.models import MarketItem
+
+
+def _fetch(ticker: str, name: str, market: str, unit: str) -> MarketItem:
+    history = yf.Ticker(ticker).history(period="6mo", interval="1d")
+    close = history["Close"]
+    volume = history["Volume"]
+    current_price = float(close.iloc[-1])
+    prev_price = float(close.iloc[-2])
+    change_pct = (current_price - prev_price) / prev_price * 100
+    return MarketItem(
+        name=name,
+        symbol=ticker,
+        market=market,
+        close=close,
+        volume=volume,
+        current_price=current_price,
+        change_pct=change_pct,
+        unit=unit,
+    )
+
+
+def fetch_all_us_stocks() -> list[MarketItem]:
+    return [_fetch(ticker, name, "US", "$") for ticker, name in US_STOCKS.items()]
+
+
+def fetch_indices() -> list[MarketItem]:
+    return [_fetch(ticker, name, "INDEX", "pt") for ticker, name in INDICES.items()]
+
+
+================================================================================
+FILE: src/indicators.py
+================================================================================
+"""이동평균, RSI, 거래량 증감 계산."""
+from __future__ import annotations
+
+from typing import Optional
+
+import pandas as pd
+
+
+def moving_average_diff(close: pd.Series, window: int) -> Optional[tuple[float, float]]:
+    """(이동평균값, 현재가 대비 괴리율 %)를 반환한다. 데이터가 부족하면 None."""
+    if len(close) < window:
+        return None
+    ma = close.rolling(window).mean().iloc[-1]
+    current = close.iloc[-1]
+    diff_pct = (current - ma) / ma * 100
+    return float(ma), float(diff_pct)
+
+
+def rsi(close: pd.Series, period: int = 14) -> Optional[float]:
+    """Wilder's smoothing 방식의 RSI(기본 14일)를 계산한다."""
+    if len(close) < period + 1:
+        return None
+    delta = close.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    last_avg_loss = avg_loss.iloc[-1]
+    if last_avg_loss == 0:
+        return 100.0
+    rs = avg_gain.iloc[-1] / last_avg_loss
+    return float(100 - 100 / (1 + rs))
+
+
+def volume_change_pct(volume: Optional[pd.Series]) -> Optional[float]:
+    """전일 대비 거래량 증감률(%)을 계산한다."""
+    if volume is None or len(volume) < 2:
+        return None
+    prev = volume.iloc[-2]
+    if prev == 0:
+        return None
+    current = volume.iloc[-1]
+    return float((current - prev) / prev * 100)
+
+
+================================================================================
+FILE: src/signal.py
+================================================================================
+"""RSI/이동평균 기반 규칙형 기술적 신호 코멘트.
+
+애널리스트 의견이 아니라 지표값을 기계적으로 조합한 참고용 코멘트다.
+"""
+from __future__ import annotations
+
+from config import MA_WINDOWS, RSI_PERIOD
+from src.indicators import moving_average_diff, rsi
+from src.models import MarketItem
+
+
+def trading_signal(item: MarketItem) -> str:
+    score = 0
+
+    rsi_value = rsi(item.close, RSI_PERIOD)
+    if rsi_value is not None:
+        if rsi_value < 30:
+            score += 1
+        elif rsi_value > 70:
+            score -= 1
+
+    for window in MA_WINDOWS:
+        result = moving_average_diff(item.close, window)
+        if result is None:
+            continue
+        _, diff_pct = result
+        score += 1 if diff_pct >= 0 else -1
+
+    if score >= 2:
+        return "매수 관점 우세 (기술적 신호 참고용)"
+    if score <= -2:
+        return "매도 관점 우세 (기술적 신호 참고용)"
+    return "중립/관망 (기술적 신호 참고용)"
+
+
+================================================================================
+FILE: src/dart_client.py
+================================================================================
+"""국내 DART 공시 수집 (OpenDART Open API, 무료 인증키 필요)."""
+from __future__ import annotations
+
+import datetime as dt
+from typing import Dict, List
+
+import requests
+
+LIST_URL = "https://opendart.fss.or.kr/api/list.json"
+
+# 매우 빈번하게 제출되는 임원/주요주주 지분 변동 보고서는 "주요 소식"으로 보기 어려워 제외한다.
+EXCLUDED_KEYWORDS = ("임원ㆍ주요주주특정증권등소유상황보고서",)
+
+
+def fetch_recent_disclosures(api_key: str, corp_code: str, days: int = 7) -> List[dict]:
+    """최근 N일 이내의 주요 공시 목록을 반환한다."""
+    end_date = dt.date.today()
+    begin_date = end_date - dt.timedelta(days=days)
+    response = requests.get(
+        LIST_URL,
+        params={
+            "crtfc_key": api_key,
+            "corp_code": corp_code,
+            "bgn_de": begin_date.strftime("%Y%m%d"),
+            "end_de": end_date.strftime("%Y%m%d"),
+            "page_count": 30,
+        },
+        timeout=15,
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    # status "013"은 "조회된 데이터가 없습니다" (정상적인 무공시 상태)
+    if data.get("status") not in ("000", "013"):
+        raise RuntimeError(f"DART 공시 조회 실패: {data.get('status')} {data.get('message')}")
+
+    disclosures = []
+    for item in data.get("list", []):
+        report_nm = item["report_nm"]
+        if any(keyword in report_nm for keyword in EXCLUDED_KEYWORDS):
+            continue
+        disclosures.append(
+            {
+                "title": report_nm,
+                "date": dt.datetime.strptime(item["rcept_dt"], "%Y%m%d").date(),
+                "url": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={item['rcept_no']}",
+            }
+        )
+    return disclosures
+
+
+def get_recent_disclosures_for_stocks(
+    api_key: str, corp_codes: Dict[str, str], days: int = 7
+) -> Dict[str, List[dict]]:
+    """{종목코드: corp_code} 매핑을 받아 {종목코드: 공시목록}을 반환한다."""
+    return {
+        stock_code: fetch_recent_disclosures(api_key, corp_code, days)
+        for stock_code, corp_code in corp_codes.items()
+    }
+
+
+================================================================================
+FILE: src/sec_client.py
+================================================================================
+"""미국 SEC EDGAR 공시 수집 (data.sec.gov, API 키 불필요).
+
+SEC는 요청 시 연락 가능한 User-Agent를 요구한다 (Fair Access 정책).
+"""
+from __future__ import annotations
+
+import datetime as dt
+from typing import Dict, List
+
+import requests
+
+SEC_HEADERS = {"User-Agent": "stock-agent-report (contact: jhy3358@gmail.com)"}
+TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik10}.json"
+
+# 매우 빈번하게 제출되는 내부자 거래/지분 매각 신고서는 "주요 소식"으로 보기 어려워 제외한다.
+EXCLUDED_FORMS = {"3", "4", "5", "3/A", "4/A", "5/A", "144", "144/A"}
+
+FORM_LABELS = {
+    "8-K": "주요사항보고 (8-K)",
+    "10-Q": "분기보고서 (10-Q)",
+    "10-K": "연차보고서 (10-K)",
+    "11-K": "종업원지주제도 보고서 (11-K)",
+    "DEF 14A": "주주총회 안건 (DEF 14A)",
+    "PX14A6G": "주주제안 관련 (PX14A6G)",
+}
+
+
+def _describe_form(form: str) -> str:
+    return FORM_LABELS.get(form, form)
+
+
+def fetch_cik_map(tickers: List[str]) -> Dict[str, str]:
+    """티커 -> 10자리 zero-padded CIK 매핑을 만든다."""
+    response = requests.get(TICKERS_URL, headers=SEC_HEADERS, timeout=15)
+    response.raise_for_status()
+    wanted = set(tickers)
+    result: Dict[str, str] = {}
+    for entry in response.json().values():
+        ticker = entry["ticker"]
+        if ticker in wanted:
+            result[ticker] = str(entry["cik_str"]).zfill(10)
+    return result
+
+
+def fetch_recent_filings(cik10: str, days: int = 7) -> List[dict]:
+    """최근 N일 이내의 주요 공시 목록을 반환한다."""
+    response = requests.get(
+        SUBMISSIONS_URL.format(cik10=cik10), headers=SEC_HEADERS, timeout=15
+    )
+    response.raise_for_status()
+    recent = response.json()["filings"]["recent"]
+    cutoff = dt.date.today() - dt.timedelta(days=days)
+
+    filings = []
+    for i, form in enumerate(recent["form"]):
+        if form in EXCLUDED_FORMS:
+            continue
+        filing_date = dt.date.fromisoformat(recent["filingDate"][i])
+        if filing_date < cutoff:
+            continue
+        accession = recent["accessionNumber"][i].replace("-", "")
+        cik_no_padding = str(int(cik10))
+        url = (
+            f"https://www.sec.gov/Archives/edgar/data/"
+            f"{cik_no_padding}/{accession}/{recent['primaryDocument'][i]}"
+        )
+        filings.append({"title": _describe_form(form), "date": filing_date, "url": url})
+    return filings
+
+
+def get_recent_filings_for_tickers(tickers: List[str], days: int = 7) -> Dict[str, List[dict]]:
+    cik_map = fetch_cik_map(tickers)
+    result: Dict[str, List[dict]] = {}
+    for ticker in tickers:
+        cik10 = cik_map.get(ticker)
+        result[ticker] = fetch_recent_filings(cik10, days) if cik10 else []
+    return result
+
+
+================================================================================
+FILE: src/news_client.py
+================================================================================
+"""미국 종목 뉴스 수집 (Yahoo Finance, Seeking Alpha — 둘 다 로그인 불필요).
+
+Seeking Alpha는 공개 RSS 피드(개인/비상업적 용도 명시 허용)를 사용한다.
+"""
+from __future__ import annotations
+
+import datetime as dt
+from email.utils import parsedate_to_datetime
+from typing import List, Optional
+from xml.etree import ElementTree
+
+import requests
+import yfinance as yf
+
+SEEKING_ALPHA_RSS_URL = "https://seekingalpha.com/api/sa/combined/{ticker}.xml"
+SA_HEADERS = {"User-Agent": "Mozilla/5.0 (stock-agent personal use RSS reader)"}
+
+
+def fetch_yahoo_news(ticker: str, limit: int = 3) -> List[dict]:
+    raw_items = yf.Ticker(ticker).news or []
+    news = []
+    for raw in raw_items[:limit]:
+        content = raw.get("content", {})
+        pub_date_str = content.get("pubDate")
+        pub_date = _parse_iso_date(pub_date_str)
+        url = (content.get("canonicalUrl") or {}).get("url") or (
+            content.get("clickThroughUrl") or {}
+        ).get("url")
+        news.append(
+            {
+                "title": content.get("title", ""),
+                "url": url,
+                "date": pub_date,
+                "source": "Yahoo Finance",
+            }
+        )
+    return news
+
+
+def fetch_seekingalpha_news(ticker: str, limit: int = 3) -> List[dict]:
+    response = requests.get(
+        SEEKING_ALPHA_RSS_URL.format(ticker=ticker), headers=SA_HEADERS, timeout=15
+    )
+    if response.status_code != 200:
+        return []
+    root = ElementTree.fromstring(response.content)
+    news = []
+    for item in root.findall(".//item")[:limit]:
+        pub_date_raw = item.findtext("pubDate")
+        news.append(
+            {
+                "title": item.findtext("title", ""),
+                "url": item.findtext("link"),
+                "date": _parse_rfc822_date(pub_date_raw),
+                "source": "Seeking Alpha",
+            }
+        )
+    return news
+
+
+def get_recent_news_for_tickers(tickers: List[str], limit_per_source: int = 3) -> dict:
+    result = {}
+    for ticker in tickers:
+        yahoo = fetch_yahoo_news(ticker, limit_per_source)
+        seeking_alpha = fetch_seekingalpha_news(ticker, limit_per_source)
+        result[ticker] = yahoo + seeking_alpha
+    return result
+
+
+def _parse_iso_date(value: Optional[str]) -> Optional[dt.date]:
+    if not value:
+        return None
+    try:
+        return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+    except ValueError:
+        return None
+
+
+def _parse_rfc822_date(value: Optional[str]) -> Optional[dt.date]:
+    if not value:
+        return None
+    try:
+        return parsedate_to_datetime(value).date()
+    except (TypeError, ValueError):
+        return None
+
+
+================================================================================
+FILE: src/report.py
+================================================================================
+"""리포트 텍스트 포맷팅."""
+from __future__ import annotations
+
+import datetime as dt
+from typing import List
+
+from config import MA_WINDOWS, RSI_PERIOD
+from src.indicators import moving_average_diff, rsi, volume_change_pct
+from src.models import MarketItem
+from src.signal import trading_signal
+
+
+def _format_price(item: MarketItem) -> str:
+    if item.unit == "원":
+        return f"{item.current_price:,.0f}{item.unit}"
+    if item.unit == "$":
+        return f"{item.unit}{item.current_price:,.2f}"
+    return f"{item.current_price:,.2f}{item.unit}"
+
+
+def _format_ma_line(item: MarketItem) -> str:
+    parts = []
+    for window in MA_WINDOWS:
+        result = moving_average_diff(item.close, window)
+        if result is None:
+            parts.append(f"MA{window} 데이터부족")
+            continue
+        _, diff_pct = result
+        position = "위" if diff_pct >= 0 else "아래"
+        parts.append(f"MA{window} {position} ({diff_pct:+.1f}%)")
+    return " / ".join(parts)
+
+
+def _format_volume_line(item: MarketItem) -> str:
+    if item.volume is None or len(item.volume) == 0:
+        return "거래량 정보 없음"
+    latest_volume = item.volume.iloc[-1]
+    change = volume_change_pct(item.volume)
+    if change is None:
+        return f"거래량 {latest_volume:,.0f}"
+    return f"거래량 {latest_volume:,.0f} (전일대비 {change:+.1f}%)"
+
+
+def format_item(item: MarketItem) -> str:
+    rsi_value = rsi(item.close, RSI_PERIOD)
+    rsi_text = f"{rsi_value:.1f}" if rsi_value is not None else "데이터부족"
+    lines = [
+        f"■ {item.name} ({item.symbol})",
+        f"현재가 {_format_price(item)} ({item.change_pct:+.2f}%)",
+        _format_ma_line(item),
+        f"RSI({RSI_PERIOD}) {rsi_text}",
+        _format_volume_line(item),
+        trading_signal(item),
+    ]
+    return "\n".join(lines)
+
+
+def format_section(title: str, items: List[MarketItem]) -> str:
+    header = f"[{title}] {dt.date.today().strftime('%Y-%m-%d')}"
+    body = "\n\n".join(format_item(item) for item in items)
+    return f"{header}\n\n{body}"
+
+
+def build_report_sections(
+    kr_stocks: List[MarketItem],
+    us_stocks: List[MarketItem],
+    indices: List[MarketItem],
+) -> List[str]:
+    return [
+        format_section("국내 종목", kr_stocks),
+        format_section("미국 종목", us_stocks),
+        format_section("주요 지수", indices),
+    ]
+
+
+# 카카오톡 "나에게 보내기" 기본 텍스트 템플릿은 글자수 200자 제한이 있어,
+# 전체 상세는 GitHub Pages에 게시하고(build_report_sections/html_report 참고),
+# 카카오톡에는 지수/등락 상위·하위 종목만 담은 요약 1건만 보낸다.
+def build_kakao_summary(
+    kr_stocks: List[MarketItem],
+    us_stocks: List[MarketItem],
+    indices: List[MarketItem],
+    report_url: str,
+    top_n: int = 2,
+) -> str:
+    # 카카오 앱이 메시지 API 검수 전에는 template의 button/link가 렌더링되지 않으므로,
+    # 카카오톡이 자동으로 링크화하는 일반 URL 텍스트를 본문에 직접 포함시킨다.
+    date_str = dt.date.today().strftime("%Y-%m-%d")
+    all_stocks = kr_stocks + us_stocks
+    gainers = sorted(all_stocks, key=lambda i: i.change_pct, reverse=True)[:top_n]
+    losers = sorted(all_stocks, key=lambda i: i.change_pct)[:top_n]
+
+    index_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in indices)
+    gainer_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in gainers)
+    loser_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in losers)
+
+    lines = [
+        f"[주식 리포트] {date_str}",
+        index_line,
+        f"상승 {gainer_line}",
+        f"하락 {loser_line}",
+        f"상세: {report_url}",
+    ]
+    return "\n".join(lines)
+
+
+================================================================================
+FILE: src/html_report.py
+================================================================================
+"""정적 HTML 리포트 페이지 생성 (GitHub Pages 게시용)."""
+from __future__ import annotations
+
+import datetime as dt
+import html
+from typing import Dict, List
+
+from config import MA_WINDOWS, RSI_PERIOD
+from src.indicators import moving_average_diff, rsi, volume_change_pct
+from src.models import MarketItem
+from src.signal import trading_signal
+
+DisclosureMap = Dict[str, List[dict]]
+
+
+def _price_text(item: MarketItem) -> str:
+    if item.unit == "원":
+        return f"{item.current_price:,.0f}{item.unit}"
+    if item.unit == "$":
+        return f"{item.unit}{item.current_price:,.2f}"
+    return f"{item.current_price:,.2f}{item.unit}"
+
+
+def _ma_text(item: MarketItem) -> str:
+    parts = []
+    for window in MA_WINDOWS:
+        result = moving_average_diff(item.close, window)
+        if result is None:
+            parts.append(f"MA{window} 데이터부족")
+            continue
+        _, diff_pct = result
+        position = "위" if diff_pct >= 0 else "아래"
+        parts.append(f"MA{window} {position} ({diff_pct:+.1f}%)")
+    return " / ".join(parts)
+
+
+def _volume_text(item: MarketItem) -> str:
+    if item.volume is None or len(item.volume) == 0:
+        return "거래량 정보 없음"
+    latest_volume = item.volume.iloc[-1]
+    change = volume_change_pct(item.volume)
+    if change is None:
+        return f"거래량 {latest_volume:,.0f}"
+    return f"거래량 {latest_volume:,.0f} (전일대비 {change:+.1f}%)"
+
+
+def _disclosures_html(disclosures: List[dict]) -> str:
+    if not disclosures:
+        return ""
+    items = "\n".join(
+        f'<li><a href="{html.escape(d["url"])}" target="_blank" rel="noopener">'
+        f'{html.escape(d["date"].strftime("%m/%d"))} {html.escape(d["title"])}</a></li>'
+        for d in disclosures
+    )
+    return f"""
+      <div class="disclosures">
+        <div class="disclosures-title">최근 공시</div>
+        <ul>{items}</ul>
+      </div>"""
+
+
+def _news_html(news: List[dict]) -> str:
+    if not news:
+        return ""
+    items = "\n".join(
+        f'<li><a href="{html.escape(n["url"])}" target="_blank" rel="noopener">'
+        f'[{html.escape(n["source"])}] {html.escape(n["title"])}</a></li>'
+        for n in news
+        if n.get("url")
+    )
+    return f"""
+      <div class="disclosures">
+        <div class="disclosures-title">관련 뉴스</div>
+        <ul>{items}</ul>
+      </div>"""
+
+
+def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> str:
+    direction = "up" if item.change_pct >= 0 else "down"
+    rsi_value = rsi(item.close, RSI_PERIOD)
+    rsi_text = f"{rsi_value:.1f}" if rsi_value is not None else "데이터부족"
+    return f"""
+    <div class="card {direction}">
+      <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>
+      <div class="price">{_price_text(item)} <span class="change">({item.change_pct:+.2f}%)</span></div>
+      <div class="row">{_ma_text(item)}</div>
+      <div class="row">RSI({RSI_PERIOD}) {rsi_text}</div>
+      <div class="row">{_volume_text(item)}</div>
+      <div class="row">{trading_signal(item)}</div>
+      {_disclosures_html(disclosures)}
+      {_news_html(news)}
+    </div>"""
+
+
+def _section(
+    title: str,
+    items: List[MarketItem],
+    disclosures_map: DisclosureMap,
+    news_map: DisclosureMap,
+) -> str:
+    cards = "\n".join(
+        _item_card(item, disclosures_map.get(item.symbol, []), news_map.get(item.symbol, []))
+        for item in items
+    )
+    return f"""
+    <section>
+      <h2>{title}</h2>
+      <div class="grid">{cards}</div>
+    </section>"""
+
+
+def build_html_report(
+    kr_stocks: List[MarketItem],
+    us_stocks: List[MarketItem],
+    indices: List[MarketItem],
+    kr_disclosures: DisclosureMap = None,
+    us_filings: DisclosureMap = None,
+    us_news: DisclosureMap = None,
+) -> str:
+    date_str = dt.date.today().strftime("%Y-%m-%d")
+    kr_disclosures = kr_disclosures or {}
+    us_filings = us_filings or {}
+    us_news = us_news or {}
+    sections = "\n".join(
+        [
+            _section("주요 지수", indices, {}, {}),
+            _section("국내 종목", kr_stocks, kr_disclosures, {}),
+            _section("미국 종목", us_stocks, us_filings, us_news),
+        ]
+    )
+    return f"""<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주식 리포트 {date_str}</title>
+<style>
+  :root {{
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #6b7280;
+    --card-bg: #f7f7f8; --up: #d1373f; --down: #1a63d1; --border: #e5e7eb;
+  }}
+  @media (prefers-color-scheme: dark) {{
+    :root {{ --bg: #14161a; --fg: #e8e8ea; --muted: #9a9ba3; --card-bg: #1d2026; --border: #2a2d34; }}
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0; padding: 24px 16px 60px; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }}
+  h1 {{ font-size: 1.3rem; margin: 0 0 4px; }}
+  .updated {{ color: var(--muted); font-size: .85rem; margin-bottom: 24px; }}
+  h2 {{ font-size: 1.05rem; margin: 28px 0 12px; }}
+  .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }}
+  .card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }}
+  .card-title {{ font-weight: 600; margin-bottom: 6px; }}
+  .symbol {{ color: var(--muted); font-weight: 400; font-size: .85rem; }}
+  .price {{ font-size: 1.1rem; margin-bottom: 8px; }}
+  .card.up .change {{ color: var(--up); }}
+  .card.down .change {{ color: var(--down); }}
+  .row {{ font-size: .85rem; color: var(--muted); margin-top: 4px; }}
+  .disclosures {{ margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }}
+  .disclosures-title {{ font-size: .78rem; color: var(--muted); margin-bottom: 4px; }}
+  .disclosures ul {{ margin: 0; padding-left: 18px; font-size: .82rem; }}
+  .disclosures li {{ margin-top: 2px; }}
+  .disclosures a {{ color: inherit; }}
+</style>
+</head>
+<body>
+  <h1>주식 리포트</h1>
+  <div class="updated">{date_str} 기준</div>
+  {sections}
+</body>
+</html>
+"""
+
+
+================================================================================
+FILE: src/kakao_client.py
+================================================================================
+"""카카오톡 '나에게 보내기' 발송 클라이언트.
+
+REST API를 직접 호출한다 (requests 기반, 외부 카카오 전용 라이브러리 미사용).
+매 실행마다 저장된 refresh_token으로 access_token을 새로 발급받아 사용한다.
+"""
+from __future__ import annotations
+
+import logging
+
+import requests
+
+KAUTH_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+KAPI_MEMO_SEND_URL = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
+
+logger = logging.getLogger(__name__)
+
+
+class KakaoAuthError(RuntimeError):
+    pass
+
+
+class KakaoSendError(RuntimeError):
+    pass
+
+
+def refresh_access_token(rest_api_key: str, refresh_token: str) -> dict:
+    """refresh_token으로 새 access_token을 발급받는다.
+
+    반환값에 'refresh_token'이 포함되어 있으면 카카오 측에서 토큰을 회전한 것이므로,
+    호출부에서 이를 감지해 저장된 값을 갱신해야 한다.
+    """
+    response = requests.post(
+        KAUTH_TOKEN_URL,
+        data={
+            "grant_type": "refresh_token",
+            "client_id": rest_api_key,
+            "refresh_token": refresh_token,
+        },
+        timeout=10,
+    )
+    if response.status_code != 200:
+        raise KakaoAuthError(
+            f"access_token 갱신 실패 (status={response.status_code}): {response.text}"
+        )
+    payload = response.json()
+    if "refresh_token" in payload:
+        logger.warning(
+            "카카오가 새 refresh_token을 발급했습니다. "
+            "GitHub Secrets의 KAKAO_REFRESH_TOKEN 값을 갱신하세요."
+        )
+    return payload
+
+
+def send_text_to_me(
+    access_token: str, text: str, link_url: str, button_title: str = "상세 리포트 보기"
+) -> None:
+    """카카오톡 '나에게 보내기'로 텍스트 메시지 1건을 발송한다.
+
+    button_title을 지정해야 메시지에 클릭 가능한 버튼(링크)이 표시된다.
+    """
+    template_object = {
+        "object_type": "text",
+        "text": text,
+        "link": {
+            "web_url": link_url,
+            "mobile_web_url": link_url,
+        },
+        "button_title": button_title,
+    }
+    response = requests.post(
+        KAPI_MEMO_SEND_URL,
+        headers={"Authorization": f"Bearer {access_token}"},
+        data={"template_object": _to_json(template_object)},
+        timeout=10,
+    )
+    if response.status_code != 200:
+        raise KakaoSendError(
+            f"카카오톡 발송 실패 (status={response.status_code}): {response.text}"
+        )
+
+
+def send_summary(rest_api_key: str, refresh_token: str, text: str, link_url: str) -> None:
+    """요약 텍스트 메시지 1건을 상세 리포트 링크와 함께 발송한다."""
+    token_payload = refresh_access_token(rest_api_key, refresh_token)
+    send_text_to_me(token_payload["access_token"], text, link_url)
+
+
+def _to_json(obj: dict) -> str:
+    import json
+
+    return json.dumps(obj, ensure_ascii=False)
+
+
+================================================================================
+FILE: src/main.py
+================================================================================
+"""전체 파이프라인: 데이터 수집 -> 지표 계산 -> 리포트 생성 -> 카카오톡 발송."""
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from config import DISCLOSURE_LOOKBACK_DAYS, KR_DART_CORP_CODES, US_STOCKS
+from src.dart_client import get_recent_disclosures_for_stocks
+from src.html_report import build_html_report
+from src.kakao_client import send_summary
+from src.kr_stocks import fetch_all_kr_stocks
+from src.news_client import get_recent_news_for_tickers
+from src.report import build_kakao_summary, build_report_sections
+from src.sec_client import get_recent_filings_for_tickers
+from src.us_stocks import fetch_all_us_stocks, fetch_indices
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+
+DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
+
+
+def _resolve_report_page_url() -> str:
+    """REPORT_PAGE_URL이 설정되어 있으면 그 값을, GitHub Actions 환경이면
+    GITHUB_REPOSITORY로부터 Pages URL을 자동 유추한다."""
+    explicit = os.environ.get("REPORT_PAGE_URL")
+    if explicit:
+        return explicit
+
+    repository = os.environ.get("GITHUB_REPOSITORY")  # "owner/repo"
+    if repository and "/" in repository:
+        owner, repo = repository.split("/", 1)
+        return f"https://{owner}.github.io/{repo}/"
+
+    logger.warning(
+        "REPORT_PAGE_URL이 설정되지 않아 임시 링크(https://github.com)를 사용합니다. "
+        "GitHub Pages 설정 후 REPORT_PAGE_URL을 등록하세요."
+    )
+    return "https://github.com"
+
+
+def main() -> None:
+    load_dotenv()
+
+    logger.info("국내 종목 데이터 수집 중...")
+    kr_stocks = fetch_all_kr_stocks()
+
+    logger.info("미국 종목 및 지수 데이터 수집 중...")
+    us_stocks = fetch_all_us_stocks()
+    indices = fetch_indices()
+
+    for section in build_report_sections(kr_stocks, us_stocks, indices):
+        print(section)
+        print("\n" + "=" * 40 + "\n")
+
+    logger.info("SEC 공시 조회 중...")
+    us_filings = get_recent_filings_for_tickers(
+        list(US_STOCKS.keys()), DISCLOSURE_LOOKBACK_DAYS
+    )
+
+    logger.info("Yahoo Finance / Seeking Alpha 뉴스 조회 중...")
+    us_news = get_recent_news_for_tickers(list(US_STOCKS.keys()))
+
+    dart_api_key = os.environ.get("DART_API_KEY")
+    if dart_api_key:
+        logger.info("DART 공시 조회 중...")
+        kr_disclosures = get_recent_disclosures_for_stocks(
+            dart_api_key, KR_DART_CORP_CODES, DISCLOSURE_LOOKBACK_DAYS
+        )
+    else:
+        logger.warning("DART_API_KEY가 설정되지 않아 국내 공시 조회를 건너뜁니다.")
+        kr_disclosures = {}
+
+    DOCS_DIR.mkdir(exist_ok=True)
+    (DOCS_DIR / "index.html").write_text(
+        build_html_report(
+            kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news
+        ),
+        encoding="utf-8",
+    )
+    logger.info("HTML 리포트 생성 완료: %s", DOCS_DIR / "index.html")
+
+    rest_api_key = os.environ.get("KAKAO_REST_API_KEY")
+    refresh_token = os.environ.get("KAKAO_REFRESH_TOKEN")
+
+    if not rest_api_key or not refresh_token:
+        logger.warning(
+            "KAKAO_REST_API_KEY 또는 KAKAO_REFRESH_TOKEN이 설정되지 않아 "
+            "카카오톡 발송을 건너뜁니다 (리포트 콘솔 출력만 수행)."
+        )
+        return
+
+    page_url = _resolve_report_page_url()
+    summary = build_kakao_summary(kr_stocks, us_stocks, indices, page_url)
+    logger.info("카카오톡 발송 중...")
+    send_summary(rest_api_key, refresh_token, summary, page_url)
+    logger.info("발송 완료")
+
+
+if __name__ == "__main__":
+    main()
+
+
+================================================================================
+FILE: scripts/kakao_auth_setup.py
+================================================================================
+"""카카오톡 '나에게 보내기' 최초 인증 스크립트 (1회 실행).
+
+사용법:
+    1. .env 파일에 KAKAO_REST_API_KEY, KAKAO_REDIRECT_URI를 채워둔다.
+       (KAKAO_REDIRECT_URI는 https://developers.kakao.com/tool/oauth 사용을 권장)
+    2. python scripts/kakao_auth_setup.py 실행
+    3. 출력된 인가 URL을 브라우저로 열어 카카오 로그인/동의
+    4. 리다이렉트된 페이지 URL의 `code=` 파라미터 값을 터미널에 붙여넣기
+    5. refresh_token이 .kakao_token.json에 저장되고, GitHub Secrets 등록 안내가 출력됨
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import urllib.parse
+from pathlib import Path
+
+import requests
+from dotenv import load_dotenv
+
+KAUTH_AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
+KAUTH_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+TOKEN_FILE = Path(__file__).resolve().parent.parent / ".kakao_token.json"
+
+
+def main() -> None:
+    load_dotenv()
+    rest_api_key = os.environ.get("KAKAO_REST_API_KEY")
+    redirect_uri = os.environ.get(
+        "KAKAO_REDIRECT_URI", "https://developers.kakao.com/tool/oauth"
+    )
+
+    if not rest_api_key:
+        print("오류: .env 파일에 KAKAO_REST_API_KEY를 먼저 설정하세요.")
+        sys.exit(1)
+
+    params = {
+        "client_id": rest_api_key,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "talk_message",
+    }
+    authorize_url = f"{KAUTH_AUTHORIZE_URL}?{urllib.parse.urlencode(params)}"
+
+    print("아래 URL을 브라우저에서 열어 카카오 로그인 및 동의를 진행하세요:\n")
+    print(authorize_url)
+    print(
+        "\n동의 후 리다이렉트된 페이지의 URL에서 'code=' 뒤의 값을 복사해 아래에 붙여넣으세요."
+    )
+    code = input("인가 코드(code): ").strip()
+
+    token_response = requests.post(
+        KAUTH_TOKEN_URL,
+        data={
+            "grant_type": "authorization_code",
+            "client_id": rest_api_key,
+            "redirect_uri": redirect_uri,
+            "code": code,
+        },
+        timeout=10,
+    )
+    if token_response.status_code != 200:
+        print(f"토큰 발급 실패 (status={token_response.status_code}): {token_response.text}")
+        sys.exit(1)
+
+    payload = token_response.json()
+    refresh_token = payload["refresh_token"]
+
+    TOKEN_FILE.write_text(
+        json.dumps({"refresh_token": refresh_token}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    print(f"\nrefresh_token이 {TOKEN_FILE}에 저장되었습니다.")
+    print("\n다음 두 값을 GitHub 저장소 Settings > Secrets and variables > Actions에 등록하세요:")
+    print(f"  KAKAO_REST_API_KEY = {rest_api_key}")
+    print(f"  KAKAO_REFRESH_TOKEN = {refresh_token}")
+    print(
+        "\n(참고) 카카오 refresh_token은 발급 후 약 60일간 유효하며, "
+        "만료 시 이 스크립트를 다시 실행해 재발급받아야 합니다."
+    )
+
+
+if __name__ == "__main__":
+    main()
+
+
+================================================================================
+FILE: .github/workflows/daily_report.yml
+================================================================================
+name: Daily Stock Report
+
+on:
+  schedule:
+    - cron: "0 21 * * *"  # UTC 21:00 = KST 06:00 (매일)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run report pipeline
+        env:
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python -m src.main
+
+      - name: Commit updated report page
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git diff --staged --quiet || git commit -m "docs: update daily stock report"
+          git push
+
+
