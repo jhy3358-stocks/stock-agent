@@ -27,6 +27,7 @@ jobs:
         env:
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: python -m src.main
 
       - name: Commit updated report page

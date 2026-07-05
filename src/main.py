@@ -7,10 +7,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from config import DISCLOSURE_LOOKBACK_DAYS, KR_DART_CORP_CODES, US_STOCKS
+from src.dart_client import get_recent_disclosures_for_stocks
 from src.html_report import build_html_report
 from src.kakao_client import send_summary
 from src.kr_stocks import fetch_all_kr_stocks
 from src.report import build_kakao_summary, build_report_sections
+from src.sec_client import get_recent_filings_for_tickers
 from src.us_stocks import fetch_all_us_stocks, fetch_indices
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -52,9 +55,25 @@ def main() -> None:
         print(section)
         print("\n" + "=" * 40 + "\n")
 
+    logger.info("SEC 공시 조회 중...")
+    us_filings = get_recent_filings_for_tickers(
+        list(US_STOCKS.keys()), DISCLOSURE_LOOKBACK_DAYS
+    )
+
+    dart_api_key = os.environ.get("DART_API_KEY")
+    if dart_api_key:
+        logger.info("DART 공시 조회 중...")
+        kr_disclosures = get_recent_disclosures_for_stocks(
+            dart_api_key, KR_DART_CORP_CODES, DISCLOSURE_LOOKBACK_DAYS
+        )
+    else:
+        logger.warning("DART_API_KEY가 설정되지 않아 국내 공시 조회를 건너뜁니다.")
+        kr_disclosures = {}
+
     DOCS_DIR.mkdir(exist_ok=True)
     (DOCS_DIR / "index.html").write_text(
-        build_html_report(kr_stocks, us_stocks, indices), encoding="utf-8"
+        build_html_report(kr_stocks, us_stocks, indices, kr_disclosures, us_filings),
+        encoding="utf-8",
     )
     logger.info("HTML 리포트 생성 완료: %s", DOCS_DIR / "index.html")
 

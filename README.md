@@ -11,7 +11,9 @@
     yfinance(`^KS11`, `^IXIC`, `^GSPC`)로 수집합니다. 개별 국내 종목은 pykrx를 그대로 사용합니다.
 - `src/indicators.py` — 이동평균(5/20/60일), RSI(14일), 거래량 증감 계산
 - `src/report.py` — 콘솔용 전체 리포트 텍스트 + 카카오톡 요약 메시지(200자 이내) 생성
-- `src/html_report.py` — GitHub Pages에 게시할 전체 상세 리포트 HTML 페이지 생성
+- `src/html_report.py` — GitHub Pages에 게시할 전체 상세 리포트 HTML 페이지 생성 (종목별 최근 공시 포함)
+- `src/dart_client.py` — 국내 종목 최근 공시 수집 (OpenDART Open API, 무료 인증키 필요)
+- `src/sec_client.py` — 미국 종목 최근 공시 수집 (SEC EDGAR, API 키 불필요)
 - `src/kakao_client.py` — 카카오톡 "나에게 보내기" 발송 (REST API 직접 호출)
 - `src/main.py` — 전체 파이프라인 실행 진입점
 - `scripts/kakao_auth_setup.py` — 최초 1회 실행하는 카카오 OAuth 인증 스크립트
@@ -56,6 +58,14 @@ python scripts/kakao_auth_setup.py
 - 발급된 `refresh_token`이 `.kakao_token.json`에 저장되고, GitHub Secrets에 등록할 값이 콘솔에 출력됨
 - 로컬 테스트를 위해 `.env`의 `KAKAO_REFRESH_TOKEN`에도 같은 값을 채워두면 4번 단계에서 실제 발송까지 확인 가능
 
+## 3-1. DART 인증키 발급 (국내 공시 조회용, 선택)
+
+1. https://opendart.fss.or.kr 회원가입/로그인
+2. **인증키 신청/관리** 메뉴에서 인증키 발급 신청 (즉시 무료 발급)
+3. 발급된 인증키를 `.env`의 `DART_API_KEY`에 붙여넣기
+
+키가 없어도 파이프라인은 정상 동작하며, 이 경우 국내 종목 공시만 생략됩니다 (미국 SEC 공시는 키 없이 항상 조회됨).
+
 ## 4. 로컬 테스트
 
 ```bash
@@ -74,6 +84,7 @@ python -m src.main
 2. 저장소 **Settings > Secrets and variables > Actions**에서 Secret 추가:
    - `KAKAO_REST_API_KEY`
    - `KAKAO_REFRESH_TOKEN`
+   - `DART_API_KEY` (선택 — 없으면 국내 공시 조회만 생략됨)
 3. 저장소 **Settings > Pages**에서 Source를 **Deploy from a branch**로 설정하고,
    Branch는 `main` / 폴더는 `/docs`로 지정 후 저장
    - 최초 1회는 `docs/index.html`이 존재해야 폴더 선택지가 나타납니다. 로컬에서 `python -m src.main`을
