@@ -40,5 +40,5 @@ KR_DART_CORP_CODES = {
     "005380": "00164742",  # 현대차(현대자동차)
 }
 
-# 공시/공시 조회 기간 (일)
-DISCLOSURE_LOOKBACK_DAYS = 7
+# 공시/뉴스 조회 기간 (일)
+DISCLOSURE_LOOKBACK_DAYS = 2

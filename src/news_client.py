@@ -16,13 +16,15 @@ SEEKING_ALPHA_RSS_URL = "https://seekingalpha.com/api/sa/combined/{ticker}.xml"
 SA_HEADERS = {"User-Agent": "Mozilla/5.0 (stock-agent personal use RSS reader)"}
 
 
-def fetch_yahoo_news(ticker: str, limit: int = 3) -> List[dict]:
+def fetch_yahoo_news(ticker: str, limit: int = 3, days: int = 2) -> List[dict]:
+    cutoff = dt.date.today() - dt.timedelta(days=days)
     raw_items = yf.Ticker(ticker).news or []
     news = []
-    for raw in raw_items[:limit]:
+    for raw in raw_items:
         content = raw.get("content", {})
-        pub_date_str = content.get("pubDate")
-        pub_date = _parse_iso_date(pub_date_str)
+        pub_date = _parse_iso_date(content.get("pubDate"))
+        if pub_date is None or pub_date < cutoff:
+            continue
         url = (content.get("canonicalUrl") or {}).get("url") or (
             content.get("clickThroughUrl") or {}
         ).get("url")
@@ -34,10 +36,13 @@ def fetch_yahoo_news(ticker: str, limit: int = 3) -> List[dict]:
                 "source": "Yahoo Finance",
             }
         )
+        if len(news) >= limit:
+            break
     return news
 
 
-def fetch_seekingalpha_news(ticker: str, limit: int = 3) -> List[dict]:
+def fetch_seekingalpha_news(ticker: str, limit: int = 3, days: int = 2) -> List[dict]:
+    cutoff = dt.date.today() - dt.timedelta(days=days)
     response = requests.get(
         SEEKING_ALPHA_RSS_URL.format(ticker=ticker), headers=SA_HEADERS, timeout=15
     )
@@ -45,24 +50,30 @@ def fetch_seekingalpha_news(ticker: str, limit: int = 3) -> List[dict]:
         return []
     root = ElementTree.fromstring(response.content)
     news = []
-    for item in root.findall(".//item")[:limit]:
-        pub_date_raw = item.findtext("pubDate")
+    for item in root.findall(".//item"):
+        pub_date = _parse_rfc822_date(item.findtext("pubDate"))
+        if pub_date is None or pub_date < cutoff:
+            continue
         news.append(
             {
                 "title": item.findtext("title", ""),
                 "url": item.findtext("link"),
-                "date": _parse_rfc822_date(pub_date_raw),
+                "date": pub_date,
                 "source": "Seeking Alpha",
             }
         )
+        if len(news) >= limit:
+            break
     return news
 
 
-def get_recent_news_for_tickers(tickers: List[str], limit_per_source: int = 3) -> dict:
+def get_recent_news_for_tickers(
+    tickers: List[str], limit_per_source: int = 3, days: int = 2
+) -> dict:
     result = {}
     for ticker in tickers:
-        yahoo = fetch_yahoo_news(ticker, limit_per_source)
-        seeking_alpha = fetch_seekingalpha_news(ticker, limit_per_source)
+        yahoo = fetch_yahoo_news(ticker, limit_per_source, days)
+        seeking_alpha = fetch_seekingalpha_news(ticker, limit_per_source, days)
         result[ticker] = yahoo + seeking_alpha
     return result
 

@@ -62,7 +62,9 @@ def main() -> None:
     )
 
     logger.info("Yahoo Finance / Seeking Alpha 뉴스 조회 중...")
-    us_news = get_recent_news_for_tickers(list(US_STOCKS.keys()))
+    us_news = get_recent_news_for_tickers(
+        list(US_STOCKS.keys()), days=DISCLOSURE_LOOKBACK_DAYS
+    )
 
     dart_api_key = os.environ.get("DART_API_KEY")
     if dart_api_key:
