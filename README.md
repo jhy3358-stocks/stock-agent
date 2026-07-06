@@ -1,6 +1,6 @@
 # 주식 에이전트팀
 
-매일 아침 국내/미국 주요 종목·지수의 기술적 분석 리포트를 자동 생성해 카카오톡 "나에게 보내기"로 발송합니다.
+매일 하루 3회(KST 08:00/17:00/21:30) 국내/미국 주요 종목·지수의 기술적 분석 리포트를 자동 생성해 카카오톡 "나에게 보내기"로 발송합니다.
 (요구사항 원문: `주식에이전트팀_요구사항-2.md`)
 
 ## 구성
@@ -20,7 +20,7 @@
 - `src/kakao_client.py` — 카카오톡 "나에게 보내기" 발송 (REST API 직접 호출)
 - `src/main.py` — 전체 파이프라인 실행 진입점
 - `scripts/kakao_auth_setup.py` — 최초 1회 실행하는 카카오 OAuth 인증 스크립트
-- `.github/workflows/daily_report.yml` — 매일 06:00 KST 자동 실행 (GitHub Actions)
+- `.github/workflows/daily_report.yml` — 매일 KST 08:00/17:00/21:30 자동 실행 (GitHub Actions)
 
 ## 발송 방식
 
@@ -104,8 +104,8 @@ python -m src.main
    - 활성화 후 나오는 Pages URL(`https://<계정>.github.io/<저장소명>/`)이 상세 리포트 페이지 주소입니다
      (GitHub Actions에서는 `GITHUB_REPOSITORY` 값으로 이 URL을 자동으로 계산하므로 별도 등록이 필요 없습니다)
 4. **Actions** 탭에서 `Daily Stock Report` 워크플로우 확인
-   - 매일 06:00 KST(UTC 21:00) 자동 실행 — 데이터 수집 → `docs/index.html` 갱신 후 자동 커밋/push →
-     카카오톡 요약 메시지 발송
+   - 매일 KST 08:00/17:00/21:30(UTC 23:00/08:00/12:30) 자동 실행 — 데이터 수집 →
+     `docs/index.html` 갱신 후 자동 커밋/push → 카카오톡 요약 메시지 발송
    - `workflow_dispatch`로 수동 실행 테스트 가능
 
 ## 참고: refresh_token 만료
