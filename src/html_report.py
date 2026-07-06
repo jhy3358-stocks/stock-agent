@@ -124,8 +124,8 @@ def build_html_report(
     sections = "\n".join(
         [
             _section("주요 지수", indices, {}, {}),
-            _section("국내 종목", kr_stocks, kr_disclosures, {}),
             _section("미국 종목", us_stocks, us_filings, us_news),
+            _section("국내 종목", kr_stocks, kr_disclosures, {}),
         ]
     )
     return f"""<!doctype html>

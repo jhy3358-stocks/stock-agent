@@ -67,8 +67,8 @@ def build_report_sections(
     indices: List[MarketItem],
 ) -> List[str]:
     return [
-        format_section("국내 종목", kr_stocks),
         format_section("미국 종목", us_stocks),
+        format_section("국내 종목", kr_stocks),
         format_section("주요 지수", indices),
     ]
 

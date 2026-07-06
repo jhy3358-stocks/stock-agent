@@ -21,9 +21,9 @@ US_STOCKS = {
 # pykrx의 코스피 지수 조회 엔드포인트가 KRX 서버 세션 이슈로 불안정하여,
 # 지수는 KOSPI 포함 전부 yfinance로 수집한다 (개별 국내 종목은 pykrx 그대로 사용).
 INDICES = {
-    "^KS11": "코스피",
-    "^IXIC": "나스닥",
     "^GSPC": "S&P500",
+    "^IXIC": "나스닥",
+    "^KS11": "코스피",
 }
 
 MA_WINDOWS = (5, 20, 60)
