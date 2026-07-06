@@ -116,16 +116,18 @@ def build_html_report(
     kr_disclosures: DisclosureMap = None,
     us_filings: DisclosureMap = None,
     us_news: DisclosureMap = None,
+    kr_news: DisclosureMap = None,
 ) -> str:
     date_str = dt.date.today().strftime("%Y-%m-%d")
     kr_disclosures = kr_disclosures or {}
     us_filings = us_filings or {}
     us_news = us_news or {}
+    kr_news = kr_news or {}
     sections = "\n".join(
         [
             _section("주요 지수", indices, {}, {}),
             _section("미국 종목", us_stocks, us_filings, us_news),
-            _section("국내 종목", kr_stocks, kr_disclosures, {}),
+            _section("국내 종목", kr_stocks, kr_disclosures, kr_news),
         ]
     )
     return f"""<!doctype html>

@@ -15,6 +15,7 @@
 - `src/dart_client.py` — 국내 종목 최근 공시 수집 (OpenDART Open API, 무료 인증키 필요)
 - `src/sec_client.py` — 미국 종목 최근 공시 수집 (SEC EDGAR, API 키 불필요)
 - `src/news_client.py` — 미국 종목 관련 뉴스 수집 (Yahoo Finance `yfinance.news`, Seeking Alpha 공개 RSS — 둘 다 로그인 불필요)
+- `src/naver_news_client.py` — 국내 종목 관련 뉴스 수집 (네이버 뉴스 검색 API, 무료 인증키 필요)
 - `src/signal.py` — RSI/이동평균을 조합한 규칙 기반 매수/매도 관점 코멘트 (애널리스트 의견 아님, 참고용)
 - `src/kakao_client.py` — 카카오톡 "나에게 보내기" 발송 (REST API 직접 호출)
 - `src/main.py` — 전체 파이프라인 실행 진입점
@@ -68,6 +69,14 @@ python scripts/kakao_auth_setup.py
 
 키가 없어도 파이프라인은 정상 동작하며, 이 경우 국내 종목 공시만 생략됩니다 (미국 SEC 공시는 키 없이 항상 조회됨).
 
+## 3-2. 네이버 뉴스 검색 API 발급 (국내 종목 뉴스 조회용, 선택)
+
+1. https://developers.naver.com 접속 → 로그인 → **Application > 애플리케이션 등록**
+2. 사용 API에서 **검색** 체크, WEB 서비스 URL은 형식적 필드이므로 아무 URL이나 입력
+3. 등록 후 발급된 **Client ID**, **Client Secret**을 `.env`의 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`에 붙여넣기
+
+키가 없어도 파이프라인은 정상 동작하며, 이 경우 국내 종목 뉴스만 생략됩니다.
+
 ## 4. 로컬 테스트
 
 ```bash
@@ -87,6 +96,7 @@ python -m src.main
    - `KAKAO_REST_API_KEY`
    - `KAKAO_REFRESH_TOKEN`
    - `DART_API_KEY` (선택 — 없으면 국내 공시 조회만 생략됨)
+   - `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` (선택 — 없으면 국내 뉴스 조회만 생략됨)
 3. 저장소 **Settings > Pages**에서 Source를 **Deploy from a branch**로 설정하고,
    Branch는 `main` / 폴더는 `/docs`로 지정 후 저장
    - 최초 1회는 `docs/index.html`이 존재해야 폴더 선택지가 나타납니다. 로컬에서 `python -m src.main`을

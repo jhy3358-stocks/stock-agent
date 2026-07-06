@@ -7,11 +7,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from config import DISCLOSURE_LOOKBACK_DAYS, KR_DART_CORP_CODES, US_STOCKS
+from config import DISCLOSURE_LOOKBACK_DAYS, KR_DART_CORP_CODES, KR_STOCKS, US_STOCKS
 from src.dart_client import get_recent_disclosures_for_stocks
 from src.html_report import build_html_report
 from src.kakao_client import send_summary
 from src.kr_stocks import fetch_all_kr_stocks
+from src.naver_news_client import get_recent_news_for_stocks as get_naver_news_for_stocks
 from src.news_client import get_recent_news_for_tickers
 from src.report import build_kakao_summary, build_report_sections
 from src.sec_client import get_recent_filings_for_tickers
@@ -76,10 +77,23 @@ def main() -> None:
         logger.warning("DART_API_KEY가 설정되지 않아 국내 공시 조회를 건너뜁니다.")
         kr_disclosures = {}
 
+    naver_client_id = os.environ.get("NAVER_CLIENT_ID")
+    naver_client_secret = os.environ.get("NAVER_CLIENT_SECRET")
+    if naver_client_id and naver_client_secret:
+        logger.info("네이버 뉴스 조회 중...")
+        kr_news = get_naver_news_for_stocks(
+            naver_client_id, naver_client_secret, KR_STOCKS, days=DISCLOSURE_LOOKBACK_DAYS
+        )
+    else:
+        logger.warning(
+            "NAVER_CLIENT_ID/NAVER_CLIENT_SECRET이 설정되지 않아 국내 뉴스 조회를 건너뜁니다."
+        )
+        kr_news = {}
+
     DOCS_DIR.mkdir(exist_ok=True)
     (DOCS_DIR / "index.html").write_text(
         build_html_report(
-            kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news
+            kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news, kr_news
         ),
         encoding="utf-8",
     )
