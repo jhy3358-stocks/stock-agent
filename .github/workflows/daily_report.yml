@@ -1,12 +1,9 @@
 name: Daily Stock Report
 
 on:
-  # GitHub는 매 정각(00분)에 스케줄 실행이 몰려 지연되기 쉽다고 안내하므로,
-  # 정각을 살짝 비껴가게 설정해 지연 가능성을 줄인다.
-  schedule:
-    - cron: "7 23 * * *"   # UTC 23:07 = KST 08:07 (다음날) ~ 목표 08:00
-    - cron: "7 8 * * *"    # UTC 08:07 = KST 17:07 ~ 목표 17:00
-    - cron: "37 12 * * *"  # UTC 12:37 = KST 21:37 ~ 목표 21:30
+  # GitHub의 자체 schedule(cron) 트리거는 부하가 몰리면 몇 시간씩 지연될 수 있어
+  # (2026-07-07 실제로 4시간+ 지연 확인) 제거하고, 외부 스케줄러(cron-job.org)가
+  # GitHub API로 workflow_dispatch를 호출하는 방식으로 대체했다.
   workflow_dispatch: {}
 
 permissions:
