@@ -68,10 +68,8 @@ jobs:
           if [ -n "$EXISTING" ]; then
             gh issue comment "$EXISTING" --repo "${{ github.repository }}" --body "다시 실패했습니다: $RUN_URL"
           else
-            gh issue create --repo "${{ github.repository }}" --title "⚠️ Daily Stock Report 발송 실패" \
-              --body "워크플로우 실행이 실패했습니다: $RUN_URL
-
-이 이슈가 닫히지 않은 동안은 실패할 때마다 댓글로만 추가됩니다. 원인을 해결한 뒤 이 이슈를 닫아주세요."
+            BODY=$(printf '워크플로우 실행이 실패했습니다: %s\n\n이 이슈가 닫히지 않은 동안은 실패할 때마다 댓글로만 추가됩니다. 원인을 해결한 뒤 이 이슈를 닫아주세요.' "$RUN_URL")
+            gh issue create --repo "${{ github.repository }}" --title "⚠️ Daily Stock Report 발송 실패" --body "$BODY"
           fi
 
       - name: Commit updated report page
