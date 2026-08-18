@@ -79,10 +79,15 @@ def send_text_to_me(
         )
 
 
-def send_summary(rest_api_key: str, refresh_token: str, text: str, link_url: str) -> None:
-    """요약 텍스트 메시지 1건을 상세 리포트 링크와 함께 발송한다."""
+def send_summary(rest_api_key: str, refresh_token: str, text: str, link_url: str) -> dict:
+    """요약 텍스트 메시지 1건을 상세 리포트 링크와 함께 발송한다.
+
+    반환값은 refresh_access_token()의 원본 페이로드로, 카카오가 refresh_token을
+    새로 발급했는지(로테이션) 호출부에서 확인할 때 사용한다.
+    """
     token_payload = refresh_access_token(rest_api_key, refresh_token)
     send_text_to_me(token_payload["access_token"], text, link_url)
+    return token_payload
 
 
 def _to_json(obj: dict) -> str:

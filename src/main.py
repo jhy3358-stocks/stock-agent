@@ -112,8 +112,16 @@ def main() -> None:
     page_url = _resolve_report_page_url()
     summary = build_kakao_summary(kr_stocks, us_stocks, indices, page_url)
     logger.info("카카오톡 발송 중...")
-    send_summary(rest_api_key, refresh_token, summary, page_url)
+    token_payload = send_summary(rest_api_key, refresh_token, summary, page_url)
     logger.info("발송 완료")
+
+    new_refresh_token = token_payload.get("refresh_token")
+    if new_refresh_token and new_refresh_token != refresh_token:
+        logger.warning("카카오가 새 refresh_token을 발급했습니다.")
+        token_file = os.environ.get("KAKAO_NEW_TOKEN_FILE")
+        if token_file:
+            Path(token_file).write_text(new_refresh_token, encoding="utf-8")
+            logger.info("새 refresh_token을 %s에 기록했습니다.", token_file)
 
 
 if __name__ == "__main__":

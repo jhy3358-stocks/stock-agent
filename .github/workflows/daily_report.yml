@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   send-report:
@@ -32,7 +33,46 @@ jobs:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          KAKAO_NEW_TOKEN_FILE: ${{ runner.temp }}/new_kakao_refresh_token.txt
         run: python -m src.main
+
+      # 카카오가 access_token 갱신 시 refresh_token을 새로 발급(로테이션)하면
+      # src/main.py가 그 값을 이 파일에 남긴다. 존재하면 GitHub Secrets에 반영해
+      # 다음 실행부터 새 값을 쓰도록 한다. Secrets 쓰기는 기본 GITHUB_TOKEN 권한
+      # 밖이라 별도 PAT(secrets: write 권한, KAKAO_TOKEN_ROTATOR_PAT)가 필요하다.
+      - name: Rotate Kakao refresh token if reissued
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.KAKAO_TOKEN_ROTATOR_PAT }}
+          TOKEN_FILE: ${{ runner.temp }}/new_kakao_refresh_token.txt
+        run: |
+          if [ ! -s "$TOKEN_FILE" ]; then
+            echo "새로 발급된 refresh_token 없음, 건너뜀"
+            exit 0
+          fi
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::새 refresh_token이 발급됐지만 KAKAO_TOKEN_ROTATOR_PAT 시크릿이 없어 자동 반영하지 못했습니다. 수동으로 KAKAO_REFRESH_TOKEN을 갱신하세요."
+            exit 0
+          fi
+          echo "::add-mask::$(cat "$TOKEN_FILE")"
+          gh secret set KAKAO_REFRESH_TOKEN --body "$(cat "$TOKEN_FILE")" --repo "${{ github.repository }}"
+          echo "KAKAO_REFRESH_TOKEN 시크릿을 새로 발급된 값으로 갱신했습니다."
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          EXISTING=$(gh issue list --repo "${{ github.repository }}" --state open --search "in:title 리포트 발송 실패" --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "${{ github.repository }}" --body "다시 실패했습니다: $RUN_URL"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "⚠️ Daily Stock Report 발송 실패" \
+              --body "워크플로우 실행이 실패했습니다: $RUN_URL
+
+이 이슈가 닫히지 않은 동안은 실패할 때마다 댓글로만 추가됩니다. 원인을 해결한 뒤 이 이슈를 닫아주세요."
+          fi
 
       - name: Commit updated report page
         run: |
