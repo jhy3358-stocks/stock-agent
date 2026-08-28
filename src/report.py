@@ -53,7 +53,9 @@ def format_item(item: MarketItem) -> str:
     ]
     if item.market != "INDEX":
         lines.append(fair_value_line(item))
-        lines.append(trading_signal(item))
+        signal_text = trading_signal(item)
+        if signal_text is not None:
+            lines.append(signal_text)
     return "\n".join(lines)
 
 

@@ -82,8 +82,11 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
     valuation_rows = ""
     if item.market != "INDEX":
         valuation_rows = f"""
-      <div class="row">{fair_value_line(item)}</div>
-      <div class="row">{trading_signal(item)}</div>"""
+      <div class="row">{fair_value_line(item)}</div>"""
+        signal_text = trading_signal(item)
+        if signal_text is not None:
+            valuation_rows += f"""
+      <div class="row">{signal_text}</div>"""
     return f"""
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>

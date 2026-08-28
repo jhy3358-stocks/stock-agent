@@ -66,15 +66,15 @@ def _legacy_ma_rsi_signal(item: MarketItem) -> str:
         return "매수 관점 우세 (기술적 신호 참고용, 적정주가 데이터 없음)"
     if score <= -2:
         return "매도 관점 우세 (기술적 신호 참고용, 적정주가 데이터 없음)"
-    return "중립/관망 (기술적 신호 참고용, 적정주가 데이터 없음)"
+    return None
 
 
-def trading_signal(item: MarketItem) -> str:
-    """적정주가 대비 괴리율 + RSI 조합으로 매수/중립/매도 관점을 판단한다.
+def trading_signal(item: MarketItem) -> Optional[str]:
+    """적정주가 대비 괴리율 + RSI 조합으로 매수/매도 관점을 판단한다.
 
     - 과매수(매도 관점 우세): 현재가가 적정주가보다 30%p 이상 높고 RSI > 70
     - 과매도(매수 관점 우세): 현재가가 적정주가보다 30%p 이상 낮고 RSI < 30
-    - 그 외: 중립/관망
+    - 그 외(중립/관망, 데이터 부족)에는 표시할 문구가 없으므로 None을 반환한다.
     """
     valuation_available = fair_value_inputs(item) is not None
     if not valuation_available:
@@ -83,10 +83,10 @@ def trading_signal(item: MarketItem) -> str:
     gap_pct = fair_value_gap_pct(item)
     rsi_value = rsi(item.close, RSI_PERIOD)
     if gap_pct is None or rsi_value is None:
-        return "판단보류 (RSI 데이터 부족)"
+        return None
 
     if gap_pct >= FAIR_VALUE_GAP_THRESHOLD and rsi_value > 70:
         return "매도 관점 우세 (과매수: 적정주가 대비 +30%↑ & RSI 70↑)"
     if gap_pct <= -FAIR_VALUE_GAP_THRESHOLD and rsi_value < 30:
         return "매수 관점 우세 (과매도: 적정주가 대비 -30%↓ & RSI 30↓)"
-    return "중립/관망 (적정주가·RSI 기준 참고용)"
+    return None
