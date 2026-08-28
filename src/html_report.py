@@ -8,7 +8,7 @@ from typing import Dict, List
 from config import MA_WINDOWS, RSI_PERIOD
 from src.indicators import moving_average_diff, rsi, volume_change_pct
 from src.models import MarketItem
-from src.signal import trading_signal
+from src.signal import fair_value_line, trading_signal
 
 DisclosureMap = Dict[str, List[dict]]
 
@@ -86,6 +86,7 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
       <div class="row">{_ma_text(item)}</div>
       <div class="row">RSI({RSI_PERIOD}) {rsi_text}</div>
       <div class="row">{_volume_text(item)}</div>
+      <div class="row">{fair_value_line(item)}</div>
       <div class="row">{trading_signal(item)}</div>
       {_disclosures_html(disclosures)}
       {_news_html(news)}
