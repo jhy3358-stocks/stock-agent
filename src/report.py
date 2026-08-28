@@ -50,9 +50,10 @@ def format_item(item: MarketItem) -> str:
         _format_ma_line(item),
         f"RSI({RSI_PERIOD}) {rsi_text}",
         _format_volume_line(item),
-        fair_value_line(item),
-        trading_signal(item),
     ]
+    if item.market != "INDEX":
+        lines.append(fair_value_line(item))
+        lines.append(trading_signal(item))
     return "\n".join(lines)
 
 

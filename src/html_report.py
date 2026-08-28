@@ -79,15 +79,18 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
     direction = "up" if item.change_pct >= 0 else "down"
     rsi_value = rsi(item.close, RSI_PERIOD)
     rsi_text = f"{rsi_value:.1f}" if rsi_value is not None else "데이터부족"
+    valuation_rows = ""
+    if item.market != "INDEX":
+        valuation_rows = f"""
+      <div class="row">{fair_value_line(item)}</div>
+      <div class="row">{trading_signal(item)}</div>"""
     return f"""
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>
       <div class="price">{_price_text(item)} <span class="change">({item.change_pct:+.2f}%)</span></div>
       <div class="row">{_ma_text(item)}</div>
       <div class="row">RSI({RSI_PERIOD}) {rsi_text}</div>
-      <div class="row">{_volume_text(item)}</div>
-      <div class="row">{fair_value_line(item)}</div>
-      <div class="row">{trading_signal(item)}</div>
+      <div class="row">{_volume_text(item)}</div>{valuation_rows}
       {_disclosures_html(disclosures)}
       {_news_html(news)}
     </div>"""

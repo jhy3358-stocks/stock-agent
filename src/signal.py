@@ -25,7 +25,7 @@ def fair_value_line(item: MarketItem) -> str:
     """리포트에 표시할 적정주가 요약 한 줄."""
     inputs = fair_value_inputs(item)
     if inputs is None:
-        return "적정주가 데이터 없음 (Forward EPS/PE 또는 g/β 미확보)"
+        return "적정주가 데이터 없음"
 
     tp = target_price(**inputs)
     gap = (item.current_price - tp) / tp * 100
@@ -41,11 +41,7 @@ def fair_value_line(item: MarketItem) -> str:
     else:
         gap_text = f"현재가가 적정주가 대비 {abs(gap):.1f}% 낮음 (상승여력 {abs(gap):.1f}%)"
 
-    return (
-        f"적정주가 {tp_text} ({gap_text}, "
-        f"FwdEPS {inputs['forward_eps']:.2f} x FwdPE {inputs['forward_pe']:.1f}, "
-        f"g={inputs['growth_rate']:.1f}% β={inputs['beta']:.2f})"
-    )
+    return f"적정주가 {tp_text} ({gap_text})"
 
 
 def _legacy_ma_rsi_signal(item: MarketItem) -> str:
