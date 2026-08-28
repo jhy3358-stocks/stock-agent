@@ -8,7 +8,7 @@ from typing import Dict, List
 from config import MA_WINDOWS, RSI_PERIOD
 from src.indicators import moving_average_diff, rsi, volume_change_pct
 from src.models import MarketItem
-from src.signal import fair_value_line, trading_signal
+from src.signal import fair_value_line
 
 DisclosureMap = Dict[str, List[dict]]
 
@@ -83,10 +83,6 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
     if item.market != "INDEX":
         valuation_rows = f"""
       <div class="row">{fair_value_line(item)}</div>"""
-        signal_text = trading_signal(item)
-        if signal_text is not None:
-            valuation_rows += f"""
-      <div class="row">{signal_text}</div>"""
     return f"""
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>

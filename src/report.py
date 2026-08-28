@@ -7,7 +7,7 @@ from typing import List
 from config import MA_WINDOWS, RSI_PERIOD
 from src.indicators import moving_average_diff, rsi, volume_change_pct
 from src.models import MarketItem
-from src.signal import fair_value_line, trading_signal
+from src.signal import fair_value_line
 
 
 def _format_price(item: MarketItem) -> str:
@@ -53,9 +53,6 @@ def format_item(item: MarketItem) -> str:
     ]
     if item.market != "INDEX":
         lines.append(fair_value_line(item))
-        signal_text = trading_signal(item)
-        if signal_text is not None:
-            lines.append(signal_text)
     return "\n".join(lines)
 
 

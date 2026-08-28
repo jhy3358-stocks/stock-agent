@@ -72,5 +72,5 @@ VALUATION = {
     "SKHY": {"growth_rate": 109.12, "beta": 2.395},
     # SPCX(스페이스X): 비상장 성격의 종목이라 Yahoo/Finviz/Seeking Alpha 어디에도
     # EPS 5년 성장률·베타가 공시되어 있지 않아 값을 채우지 않는다.
-    # (밸류에이션 데이터 미확보 -> trading_signal에서 RSI/이동평균 기반 로직으로 대체)
+    # (밸류에이션 데이터 미확보 -> fair_value_line에 "적정주가 데이터 없음"으로 표시)
 }
