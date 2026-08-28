@@ -35,8 +35,14 @@ def fair_value_line(item: MarketItem) -> str:
         tp_text = f"{item.unit}{tp:,.2f}"
     else:
         tp_text = f"{tp:,.2f}{item.unit}"
+
+    if gap >= 0:
+        gap_text = f"현재가가 적정주가 대비 {gap:.1f}% 높음 (고평가)"
+    else:
+        gap_text = f"현재가가 적정주가 대비 {abs(gap):.1f}% 낮음 (상승여력 {abs(gap):.1f}%)"
+
     return (
-        f"적정주가 {tp_text} (현재가 대비 {gap:+.1f}%, "
+        f"적정주가 {tp_text} ({gap_text}, "
         f"FwdEPS {inputs['forward_eps']:.2f} x FwdPE {inputs['forward_pe']:.1f}, "
         f"g={inputs['growth_rate']:.1f}% β={inputs['beta']:.2f})"
     )
