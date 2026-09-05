@@ -127,6 +127,17 @@ def target_price(forward_eps: float, forward_pe: float, growth_rate: float, beta
     return forward_eps * forward_pe * (1 + growth_rate / 100) / math.sqrt(beta)
 
 
+# DCF/상대가치는 yfinance 재무제표(순이익·EBITDA·FCF·주식수) 원본에 의존하는데,
+# ADR 종목(예: SKHY)처럼 통화/단위가 뒤섞여 자릿수 자체가 틀어지는 경우가
+# 확인됐다. 결과가 현재가와 자릿수가 다르게 튀면(10배 이상 차이) 계산이 아니라
+# 데이터 오염으로 보고 버린다.
+_SANITY_BAND = 10
+
+
+def _is_sane(value: float, current_price: float) -> bool:
+    return current_price / _SANITY_BAND <= value <= current_price * _SANITY_BAND
+
+
 def dcf_fair_value(item: MarketItem) -> Optional[float]:
     """2단계 DCF: 5년 explicit(개별 g -> terminal 3% fade) + terminal value.
 
@@ -169,7 +180,10 @@ def dcf_fair_value(item: MarketItem) -> Optional[float]:
     pv += terminal_value / (1 + wacc) ** DCF_EXPLICIT_YEARS
 
     equity_value = pv - net_debt
-    return equity_value / shares if equity_value > 0 else None
+    if equity_value <= 0:
+        return None
+    result = equity_value / shares
+    return result if _is_sane(result, item.current_price) else None
 
 
 def relative_per_fair_value(item: MarketItem) -> Optional[float]:
@@ -180,7 +194,8 @@ def relative_per_fair_value(item: MarketItem) -> Optional[float]:
     eps = _trailing_eps(_yahoo_ticker(item))
     if not eps:
         return None
-    return eps * peers["peer_per"]
+    result = eps * peers["peer_per"]
+    return result if _is_sane(result, item.current_price) else None
 
 
 def relative_ev_ebitda_fair_value(item: MarketItem) -> Optional[float]:
@@ -201,7 +216,10 @@ def relative_ev_ebitda_fair_value(item: MarketItem) -> Optional[float]:
         return None
     target_ev = ebitda * peers["peer_ev_ebitda"]
     equity_value = target_ev - (debt - cash)
-    return equity_value / shares if equity_value > 0 else None
+    if equity_value <= 0:
+        return None
+    result = equity_value / shares
+    return result if _is_sane(result, item.current_price) else None
 
 
 def median_fair_value(item: MarketItem) -> Optional[float]:
