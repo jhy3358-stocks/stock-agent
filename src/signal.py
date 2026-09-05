@@ -69,10 +69,8 @@ def _legacy_ma_rsi_signal(item: MarketItem) -> Optional[str]:
         _, diff_pct = result
         score += 1 if diff_pct >= 0 else -1
 
-    if score >= 2:
-        return "매수 관점 우세 (기술적 신호 참고용, 적정주가 데이터 없음)"
-    if score <= -2:
-        return "매도 관점 우세 (기술적 신호 참고용, 적정주가 데이터 없음)"
+    if (score >= 2 or score <= -2) and rsi_value is not None:
+        return f"RSI {rsi_value:.1f}"
     return None
 
 

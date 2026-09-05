@@ -97,12 +97,18 @@ def build_kakao_summary(
     index_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in indices)
     gainer_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in gainers)
     loser_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in losers)
+    rsi_line = " ".join(
+        f"{i.name}{rsi_value:.0f}"
+        for i in all_stocks
+        if (rsi_value := rsi(i.close, RSI_PERIOD)) is not None
+    )
 
     lines = [
         f"[주식 리포트] {date_str}",
         index_line,
         f"상승 {gainer_line}",
         f"하락 {loser_line}",
+        f"RSI {rsi_line}",
         f"상세: {report_url}",
     ]
     return "\n".join(lines)
