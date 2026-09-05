@@ -92,7 +92,7 @@ def trading_signal(item: MarketItem) -> Optional[str]:
         return None
 
     if gap_pct >= FAIR_VALUE_GAP_THRESHOLD and rsi_value > 70:
-        return "매도 관점 우세 (과매수: 적정주가 대비 +30%↑ & RSI 70↑)"
+        return f"매도 관점 우세 (과매수: 적정주가 대비 +30%↑ & RSI {rsi_value:.1f})"
     if gap_pct <= -FAIR_VALUE_GAP_THRESHOLD and rsi_value < 30:
-        return "매수 관점 우세 (과매도: 적정주가 대비 -30%↓ & RSI 30↓)"
+        return f"매수 관점 우세 (과매도: 적정주가 대비 -30%↓ & RSI {rsi_value:.1f})"
     return None
