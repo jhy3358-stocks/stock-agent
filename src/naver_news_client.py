@@ -55,9 +55,8 @@ def fetch_naver_news(
                 "source": "네이버 뉴스",
             }
         )
-        if len(news) >= limit:
-            break
-    return news
+    news.sort(key=lambda n: n["date"], reverse=True)
+    return news[:limit]
 
 
 def get_recent_news_for_stocks(

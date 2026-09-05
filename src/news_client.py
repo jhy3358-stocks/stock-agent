@@ -67,14 +67,21 @@ def fetch_seekingalpha_news(ticker: str, limit: int = 3, hours: int = 24) -> Lis
     return news
 
 
+# 최종적으로는 두 소스를 합쳐 최신순 상위 limit개만 남기므로, 소스별로는
+# 넉넉히 모아둔다 (너무 적게 모으면 한쪽 소스 기사가 실제로는 더 최신인데도
+# 개수 제한에 걸려 후보에서 빠질 수 있다).
+_SOURCE_POOL_SIZE = 10
+
+
 def get_recent_news_for_tickers(
-    tickers: List[str], limit_per_source: int = 3, hours: int = 24
+    tickers: List[str], limit: int = 3, hours: int = 24
 ) -> dict:
     result = {}
     for ticker in tickers:
-        yahoo = fetch_yahoo_news(ticker, limit_per_source, hours)
-        seeking_alpha = fetch_seekingalpha_news(ticker, limit_per_source, hours)
-        result[ticker] = yahoo + seeking_alpha
+        yahoo = fetch_yahoo_news(ticker, _SOURCE_POOL_SIZE, hours)
+        seeking_alpha = fetch_seekingalpha_news(ticker, _SOURCE_POOL_SIZE, hours)
+        combined = sorted(yahoo + seeking_alpha, key=lambda n: n["date"], reverse=True)
+        result[ticker] = combined[:limit]
     return result
 
 
