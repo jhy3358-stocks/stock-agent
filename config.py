@@ -74,3 +74,31 @@ VALUATION = {
     # EPS 5년 성장률·베타가 공시되어 있지 않아 값을 채우지 않는다.
     # (밸류에이션 데이터 미확보 -> fair_value_line에 "적정주가 데이터 없음"으로 표시)
 }
+
+# 업종 피어그룹 평균 배수 (src.valuation의 relative_per_fair_value /
+# relative_ev_ebitda_fair_value에서 사용). Finviz 개별 종목 페이지에서 동종업계
+# 피어그룹(5~8개사)의 trailing PER / EV-EBITDA를 모아 평균낸 값이다
+# (2026-09-06 기준 조사, 주기적 갱신 필요).
+#   - 반도체(000660·AVGO·NVDA·MU): NVDA,AVGO,MU,INTC,QCOM,TXN,AMD,TSM
+#   - 가전(005930·AAPL): AAPL,SONY
+#   - 자동차(005380·TSLA): GM,F,TM (테슬라 자신의 극단적 배수는 업종 평균을
+#     심하게 왜곡시켜 피어그룹에서 제외했다)
+#   - 인터넷소매(AMZN): AMZN,BABA,JD,EBAY,ETSY
+#   - 인터넷콘텐츠(GOOGL·META): GOOGL,META,PINS,BIDU
+#   - 소프트웨어(MSFT): MSFT,ORCL,CRM,ADBE,NOW
+# peer_ev_ebitda가 None인 항목은 원천 데이터가 깨져 있어(예: 000660은 yfinance
+# EBITDA 필드 자체가 오염돼 있음이 확인됨) 의도적으로 비워둔 것이다.
+RELATIVE_VALUATION = {
+    "005930": {"peer_per": 29.30, "peer_ev_ebitda": 27.93},
+    "000660": {"peer_per": 44.28, "peer_ev_ebitda": None},
+    "005380": {"peer_per": 24.15, "peer_ev_ebitda": 14.50},
+    "AAPL": {"peer_per": 29.30, "peer_ev_ebitda": 27.93},
+    "AMZN": {"peer_per": 22.45, "peer_ev_ebitda": 13.64},
+    "AVGO": {"peer_per": 44.28, "peer_ev_ebitda": 29.33},
+    "GOOGL": {"peer_per": 33.41, "peer_ev_ebitda": 24.69},
+    "META": {"peer_per": 33.41, "peer_ev_ebitda": 24.69},
+    "MSFT": {"peer_per": 36.48, "peer_ev_ebitda": 24.14},
+    "NVDA": {"peer_per": 44.28, "peer_ev_ebitda": 29.33},
+    "TSLA": {"peer_per": 24.15, "peer_ev_ebitda": 14.50},
+    "MU": {"peer_per": 44.28, "peer_ev_ebitda": 29.33},
+}
