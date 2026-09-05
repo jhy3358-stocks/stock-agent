@@ -18,19 +18,19 @@ def _clean_text(raw: str) -> str:
     return html.unescape(_TAG_RE.sub("", raw))
 
 
-def _parse_date(value: Optional[str]) -> Optional[dt.date]:
+def _parse_datetime(value: Optional[str]) -> Optional[dt.datetime]:
     if not value:
         return None
     try:
-        return parsedate_to_datetime(value).date()
+        return parsedate_to_datetime(value)
     except (TypeError, ValueError):
         return None
 
 
 def fetch_naver_news(
-    client_id: str, client_secret: str, query: str, limit: int = 3, days: int = 2
+    client_id: str, client_secret: str, query: str, limit: int = 3, hours: int = 24
 ) -> List[dict]:
-    cutoff = dt.date.today() - dt.timedelta(days=days)
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
     response = requests.get(
         NAVER_NEWS_URL,
         headers={
@@ -44,7 +44,7 @@ def fetch_naver_news(
 
     news = []
     for item in response.json().get("items", []):
-        pub_date = _parse_date(item.get("pubDate"))
+        pub_date = _parse_datetime(item.get("pubDate"))
         if pub_date is None or pub_date < cutoff:
             continue
         news.append(
@@ -61,10 +61,10 @@ def fetch_naver_news(
 
 
 def get_recent_news_for_stocks(
-    client_id: str, client_secret: str, stock_names: Dict[str, str], limit: int = 3, days: int = 2
+    client_id: str, client_secret: str, stock_names: Dict[str, str], limit: int = 3, hours: int = 24
 ) -> Dict[str, List[dict]]:
     """{종목코드: 종목명} 매핑을 받아 {종목코드: 뉴스목록}을 반환한다."""
     return {
-        code: fetch_naver_news(client_id, client_secret, name, limit, days)
+        code: fetch_naver_news(client_id, client_secret, name, limit, hours)
         for code, name in stock_names.items()
     }

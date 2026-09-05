@@ -7,7 +7,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from config import DISCLOSURE_LOOKBACK_DAYS, KR_DART_CORP_CODES, KR_STOCKS, US_STOCKS
+from config import (
+    DISCLOSURE_LOOKBACK_DAYS,
+    KR_DART_CORP_CODES,
+    KR_STOCKS,
+    NEWS_LOOKBACK_HOURS,
+    US_STOCKS,
+)
 from src.dart_client import get_recent_disclosures_for_stocks
 from src.html_report import build_html_report
 from src.kakao_client import send_summary
@@ -64,7 +70,7 @@ def main() -> None:
 
     logger.info("Yahoo Finance / Seeking Alpha 뉴스 조회 중...")
     us_news = get_recent_news_for_tickers(
-        list(US_STOCKS.keys()), days=DISCLOSURE_LOOKBACK_DAYS
+        list(US_STOCKS.keys()), hours=NEWS_LOOKBACK_HOURS
     )
 
     dart_api_key = os.environ.get("DART_API_KEY")
@@ -82,7 +88,7 @@ def main() -> None:
     if naver_client_id and naver_client_secret:
         logger.info("네이버 뉴스 조회 중...")
         kr_news = get_naver_news_for_stocks(
-            naver_client_id, naver_client_secret, KR_STOCKS, days=DISCLOSURE_LOOKBACK_DAYS
+            naver_client_id, naver_client_secret, KR_STOCKS, hours=NEWS_LOOKBACK_HOURS
         )
     else:
         logger.warning(

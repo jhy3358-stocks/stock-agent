@@ -42,8 +42,13 @@ KR_DART_CORP_CODES = {
     "005380": "00164742",  # 현대차(현대자동차)
 }
 
-# 공시/뉴스 조회 기간 (일)
+# 공시(SEC/DART) 조회 기간 (일)
 DISCLOSURE_LOOKBACK_DAYS = 2
+
+# 뉴스는 날짜를 화면에 표시하지 않으므로, 며칠 전 기사인지 헷갈리지 않도록
+# "최근 몇 시간"으로 판단한다 (달력상 날짜로 자르면 실행 시간대에 따라
+# 관련 뉴스가 통째로 비어버릴 수 있어 24시간 롤링 윈도를 사용).
+NEWS_LOOKBACK_HOURS = 24
 
 # GRAV(Growth Risk-Adjusted Valuation) 모델 입력값.
 # 적정주가 = 평균(Forward EPS) x 평균(Forward P/E) x (1 + g/100) / sqrt(beta)
