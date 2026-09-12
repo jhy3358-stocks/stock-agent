@@ -82,6 +82,25 @@ def _finviz_forward_metrics(symbol: str) -> tuple[Optional[float], Optional[floa
     return (data["forward_pe"], data["forward_eps"])
 
 
+@lru_cache(maxsize=None)
+def _fx_rate(from_currency: str, to_currency: str) -> Optional[float]:
+    """1 {from_currency} = ? {to_currency}, 실행 시점 실시간 환율.
+
+    SKHY(SK하이닉스 나스닥 ADR)처럼 yfinance가 재무제표 항목(FCF/부채/현금)은
+    본사 재무제표 통화(financialCurrency, 예 KRW)로, marketCap/현재가는 상장
+    통화(currency, 예 USD)로 서로 다르게 내려주는 종목이 있어 필요하다.
+    실패 시 None (호출부는 계산을 포기해야 한다 - 단위 꼬인 값을 쓰면 안 됨).
+    """
+    if from_currency == to_currency:
+        return 1.0
+    try:
+        info = yf.Ticker(f"{from_currency}{to_currency}=X").info
+        rate = info.get("regularMarketPrice") or info.get("previousClose")
+        return float(rate) if rate else None
+    except Exception:
+        return None
+
+
 def _average(*values: Optional[float]) -> Optional[float]:
     present = [v for v in values if v is not None]
     if not present:
@@ -156,6 +175,18 @@ def dcf_fair_value(item: MarketItem) -> Optional[float]:
     cash = info.get("totalCash") or 0
     if not fcf or fcf <= 0 or not shares or not market_cap:
         return None
+
+    # 재무제표 통화(financialCurrency)와 상장 통화(currency)가 다르면(SKHY 등
+    # ADR) FCF/부채/현금이 marketCap과 단위가 안 맞으므로 실시간 환율로 맞춘다.
+    financial_currency = info.get("financialCurrency")
+    price_currency = info.get("currency")
+    if financial_currency and price_currency and financial_currency != price_currency:
+        rate = _fx_rate(financial_currency, price_currency)
+        if rate is None:
+            return None
+        fcf *= rate
+        debt *= rate
+        cash *= rate
 
     beta = valuation["beta"]
     g = valuation["growth_rate"] / 100
