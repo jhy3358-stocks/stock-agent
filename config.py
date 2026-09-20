@@ -147,7 +147,7 @@ NET_DEBT = {
 #     듀레이션을 감안해 사람이 채워둔 값이다. None이면 원칙대로 GRAV와 동일한
 #     라이브 forward PE(Yahoo/Finviz 평균)를 그대로 target_pe로 쓴다
 #     (커스텀 타겟 멀티플 추정치가 라이브 값과 크게 어긋나 신뢰하기 어려운
-#     종목에 한해 None 처리 - 2026-09 기준 005930/000660).
+#     종목에 한해 None 처리 - 2026-09 기준 005930/000660/TSLA).
 #   m_score: 0~100점, 아래 4개 항목을 각 25점 배점으로 정성 평가해 합산한다.
 #     1) 기술독점성 & 시장점유율   2) 전환비용 & 생태계 락인(lock-in)
 #     3) 영업이익률(OPM) 체력     4) 원가/자본/특허 등 진입장벽
@@ -168,7 +168,7 @@ M_GRAV = {
     "META": {"target_pe": 23.0, "m_score": 69},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
     "MSFT": {"target_pe": 30.0, "m_score": 83},    # Office/Windows/Azure 전방위 엔터프라이즈 락인, OPM 최상위권
     "NVDA": {"target_pe": 35.0, "m_score": 93},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
-    "TSLA": {"target_pe": 55.0, "m_score": 48},    # FSD/배터리 기술력은 있으나 EV 경쟁 심화로 락인·이익률 약화 중
+    "TSLA": {"target_pe": None, "m_score": 48},    # FSD/배터리 기술력은 있으나 EV 경쟁 심화로 락인·이익률 약화 중. target_pe는 라이브 forward PE 사용
     "MU": {"target_pe": 12.0, "m_score": 49},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
     "SKHY": {"target_pe": 12.0, "m_score": 67},    # SK하이닉스(ADR), 000660과 동일 기업
     # SPCX: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가(적정주가 데이터 없음).
