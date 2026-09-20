@@ -1,4 +1,4 @@
-"""적정주가 계산 - GRAV 모델(기존) + DCF/상대가치를 합친 종합(median) 모델.
+"""적정주가 계산 - GRAV 모델(기존) + M-GRAV/상대가치를 합친 종합(median) 모델.
 
 [기존] GRAV(Growth Risk-Adjusted Valuation) 모델
   적정주가 = 평균(Forward EPS) x 평균(Forward P/E) x (1 + g/100) / sqrt(beta)
@@ -7,9 +7,16 @@
   g(3~5년 이익성장률)·beta(시장 대비 변동성 배수)는 두 값 모두 라이브로 안정적으로
   구하기 어려워 config.VALUATION에 사람이 주기적으로 조사해 채워둔 값을 쓴다.
 
-[신규] 종합(median) 모델 - 아래 4개 값 중 구할 수 있는 값들의 median:
+[신규] M-GRAV(해자 반영 GRAV) 모델
+  적정주가 = 평균(Forward EPS) x Target P/E x (1 + g/100) / beta^(1/M_factor)
+  M_factor = 1 + M_score/100 (M_score 0~100, 기술독점성/락인/OPM체력/진입장벽
+  4개 항목을 각 25점 배점으로 평가). 해자가 강할수록(M_score 높을수록) beta의
+  지수(1/M_factor)가 작아져 변동성 페널티가 완화된다. Target P/E·M_score는
+  config.M_GRAV에 사람이 주기적으로 조사/평가해 채워둔 값을 쓴다.
+
+[종합] 종합(median) 모델 - 아래 4개 값 중 구할 수 있는 값들의 median:
   1) 위 GRAV 모델
-  2) DCF (2단계: 개별 g -> terminal 3%로 5년 fade, CAPM 기반 WACC로 할인)
+  2) 위 M-GRAV 모델
   3) 업종평균 PER 상대가치 = 자사 trailing EPS x 업종 피어그룹 평균 trailing PER
   4) 업종평균 EV/EBITDA 상대가치 = (자사 EBITDA x 업종 피어그룹 평균 EV/EBITDA - 순부채) / 발행주식수
   업종 피어그룹 평균(PER/EV-EBITDA)은 g/beta와 마찬가지로 라이브로 안정적으로
@@ -24,18 +31,9 @@ from typing import Optional
 
 import yfinance as yf
 
-from config import RELATIVE_VALUATION, VALUATION
+from config import M_GRAV, NET_DEBT, RELATIVE_VALUATION, VALUATION
 from src.finviz_client import fetch_forward_metrics
 from src.models import MarketItem
-
-# DCF 가정치 (2026-09 기준): 무위험이자율(Rf)은 미 10년물, ERP는 통상적인 5%,
-# 부채비용(Rd)은 Rf+스프레드 근사치, 세율은 미 법인세 실효세율 근사치를 사용.
-RISK_FREE_RATE = 0.043
-EQUITY_RISK_PREMIUM = 0.05
-COST_OF_DEBT = 0.058
-TAX_RATE = 0.21
-TERMINAL_GROWTH = 0.03
-DCF_EXPLICIT_YEARS = 5
 
 
 def _yahoo_ticker(item: MarketItem) -> str:
@@ -82,30 +80,30 @@ def _finviz_forward_metrics(symbol: str) -> tuple[Optional[float], Optional[floa
     return (data["forward_pe"], data["forward_eps"])
 
 
-@lru_cache(maxsize=None)
-def _fx_rate(from_currency: str, to_currency: str) -> Optional[float]:
-    """1 {from_currency} = ? {to_currency}, 실행 시점 실시간 환율.
-
-    SKHY(SK하이닉스 나스닥 ADR)처럼 yfinance가 재무제표 항목(FCF/부채/현금)은
-    본사 재무제표 통화(financialCurrency, 예 KRW)로, marketCap/현재가는 상장
-    통화(currency, 예 USD)로 서로 다르게 내려주는 종목이 있어 필요하다.
-    실패 시 None (호출부는 계산을 포기해야 한다 - 단위 꼬인 값을 쓰면 안 됨).
-    """
-    if from_currency == to_currency:
-        return 1.0
-    try:
-        info = yf.Ticker(f"{from_currency}{to_currency}=X").info
-        rate = info.get("regularMarketPrice") or info.get("previousClose")
-        return float(rate) if rate else None
-    except Exception:
-        return None
-
-
 def _average(*values: Optional[float]) -> Optional[float]:
     present = [v for v in values if v is not None]
     if not present:
         return None
     return sum(present) / len(present)
+
+
+def _forward_eps_pe(item: MarketItem) -> tuple[Optional[float], Optional[float]]:
+    """(forward_eps, forward_pe) - Yahoo/Finviz 라이브 조회 평균.
+
+    둘 중 한쪽만 있으면 그 값을 그대로 쓰고, 둘 다 없으면 (None, None).
+    """
+    yahoo_pe, yahoo_eps = _yahoo_forward_metrics(_yahoo_ticker(item))
+    # Finviz는 KRX 상장 종목을 다루지 않는다 (KR 종목은 Yahoo 단일 소스로 대체).
+    if item.market == "KR":
+        finviz_pe, finviz_eps = (None, None)
+    else:
+        finviz_pe, finviz_eps = _finviz_forward_metrics(item.symbol)
+
+    # Yahoo가 forwardEps를 안 주는 종목(주로 KR)은 forwardPE와 현재가로 역산한다.
+    if yahoo_eps is None and yahoo_pe:
+        yahoo_eps = item.current_price / yahoo_pe
+
+    return _average(yahoo_eps, finviz_eps), _average(yahoo_pe, finviz_pe)
 
 
 def fair_value_inputs(item: MarketItem) -> Optional[dict]:
@@ -118,19 +116,7 @@ def fair_value_inputs(item: MarketItem) -> Optional[dict]:
     if valuation is None:
         return None
 
-    yahoo_pe, yahoo_eps = _yahoo_forward_metrics(_yahoo_ticker(item))
-    # Finviz는 KRX 상장 종목을 다루지 않는다 (KR 종목은 Yahoo 단일 소스로 대체).
-    if item.market == "KR":
-        finviz_pe, finviz_eps = (None, None)
-    else:
-        finviz_pe, finviz_eps = _finviz_forward_metrics(item.symbol)
-
-    # Yahoo가 forwardEps를 안 주는 종목(주로 KR)은 forwardPE와 현재가로 역산한다.
-    if yahoo_eps is None and yahoo_pe:
-        yahoo_eps = item.current_price / yahoo_pe
-
-    forward_pe = _average(yahoo_pe, finviz_pe)
-    forward_eps = _average(yahoo_eps, finviz_eps)
+    forward_eps, forward_pe = _forward_eps_pe(item)
     if forward_pe is None or forward_eps is None:
         return None
 
@@ -157,63 +143,30 @@ def _is_sane(value: float, current_price: float) -> bool:
     return current_price / _SANITY_BAND <= value <= current_price * _SANITY_BAND
 
 
-def dcf_fair_value(item: MarketItem) -> Optional[float]:
-    """2단계 DCF: 5년 explicit(개별 g -> terminal 3% fade) + terminal value.
+def m_grav_fair_value(item: MarketItem) -> Optional[float]:
+    """M-GRAV(해자 반영 GRAV): 적정주가 = Forward EPS x Target PE x (1+g/100) / beta^(1/m_factor).
 
-    FCF가 없거나 음수, WACC<=terminal_g, 결과가 음수인 경우 등 계산이
-    의미 없는 상황에서는 None을 반환한다.
+    Target PE·M_score는 config.M_GRAV, g/beta는 config.VALUATION 값을 쓴다.
+    target_pe가 None인 종목은 원칙대로 GRAV와 동일한 라이브 forward PE를 쓴다.
+    필요한 값을 하나라도 못 구하면 None을 반환한다.
     """
     valuation = VALUATION.get(item.symbol)
-    if valuation is None:
+    m_grav = M_GRAV.get(item.symbol)
+    if valuation is None or m_grav is None:
         return None
 
-    info = _yahoo_info(_yahoo_ticker(item))
-    fcf = info.get("freeCashflow")
-    shares = info.get("sharesOutstanding")
-    market_cap = info.get("marketCap")
-    debt = info.get("totalDebt") or 0
-    cash = info.get("totalCash") or 0
-    if not fcf or fcf <= 0 or not shares or not market_cap:
+    forward_eps, forward_pe = _forward_eps_pe(item)
+    if forward_eps is None:
         return None
 
-    # 재무제표 통화(financialCurrency)와 상장 통화(currency)가 다르면(SKHY 등
-    # ADR) FCF/부채/현금이 marketCap과 단위가 안 맞으므로 실시간 환율로 맞춘다.
-    financial_currency = info.get("financialCurrency")
-    price_currency = info.get("currency")
-    if financial_currency and price_currency and financial_currency != price_currency:
-        rate = _fx_rate(financial_currency, price_currency)
-        if rate is None:
-            return None
-        fcf *= rate
-        debt *= rate
-        cash *= rate
+    target_pe = m_grav["target_pe"] if m_grav["target_pe"] is not None else forward_pe
+    if target_pe is None:
+        return None
 
     beta = valuation["beta"]
-    g = valuation["growth_rate"] / 100
-    net_debt = debt - cash
-    cost_of_equity = RISK_FREE_RATE + beta * EQUITY_RISK_PREMIUM
-    total_capital = debt + market_cap
-    wacc = (
-        (market_cap / total_capital) * cost_of_equity
-        + (debt / total_capital) * COST_OF_DEBT * (1 - TAX_RATE)
-        if total_capital > 0
-        else cost_of_equity
-    )
-    if wacc <= TERMINAL_GROWTH:
-        return None
-
-    pv = 0.0
-    for year in range(1, DCF_EXPLICIT_YEARS + 1):
-        g_fade = g - (g - TERMINAL_GROWTH) * (year - 1) / (DCF_EXPLICIT_YEARS - 1)
-        fcf *= 1 + g_fade
-        pv += fcf / (1 + wacc) ** year
-    terminal_value = fcf * (1 + TERMINAL_GROWTH) / (wacc - TERMINAL_GROWTH)
-    pv += terminal_value / (1 + wacc) ** DCF_EXPLICIT_YEARS
-
-    equity_value = pv - net_debt
-    if equity_value <= 0:
-        return None
-    result = equity_value / shares
+    g = valuation["growth_rate"]
+    m_factor = 1 + m_grav["m_score"] / 100
+    result = forward_eps * target_pe * (1 + g / 100) / (beta ** (1 / m_factor))
     return result if _is_sane(result, item.current_price) else None
 
 
@@ -241,8 +194,13 @@ def relative_ev_ebitda_fair_value(item: MarketItem) -> Optional[float]:
     info = _yahoo_info(_yahoo_ticker(item))
     ebitda = info.get("ebitda")
     shares = info.get("sharesOutstanding")
-    debt = info.get("totalDebt") or 0
-    cash = info.get("totalCash") or 0
+    net_debt_override = NET_DEBT.get(item.symbol)
+    if net_debt_override:
+        debt = net_debt_override["debt"]
+        cash = net_debt_override["cash"]
+    else:
+        debt = info.get("totalDebt") or 0
+        cash = info.get("totalCash") or 0
     if not ebitda or not shares:
         return None
     target_ev = ebitda * peers["peer_ev_ebitda"]
@@ -254,14 +212,14 @@ def relative_ev_ebitda_fair_value(item: MarketItem) -> Optional[float]:
 
 
 def median_fair_value(item: MarketItem) -> Optional[float]:
-    """GRAV 모델 + DCF + 업종평균 PER + 업종평균 EV/EBITDA 중 구할 수 있는
+    """GRAV 모델 + M-GRAV + 업종평균 PER + 업종평균 EV/EBITDA 중 구할 수 있는
     값들의 median. 방법 하나가 데이터 오염 등으로 튀어도 나머지가 정상이면
     median이 어느 정도 걸러준다 (단, 여러 방법이 동시에 깨지면 못 걸러낸다)."""
     candidates = []
     inputs = fair_value_inputs(item)
     if inputs:
         candidates.append(target_price(**inputs))
-    for fn in (dcf_fair_value, relative_per_fair_value, relative_ev_ebitda_fair_value):
+    for fn in (m_grav_fair_value, relative_per_fair_value, relative_ev_ebitda_fair_value):
         value = fn(item)
         if value:
             candidates.append(value)

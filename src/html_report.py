@@ -5,8 +5,8 @@ import datetime as dt
 import html
 from typing import Dict, List
 
-from config import MA_WINDOWS, RSI_PERIOD
-from src.indicators import moving_average_diff, rsi, volume_change_pct
+from config import RSI_PERIOD
+from src.indicators import rsi, volume_change_pct
 from src.models import MarketItem
 from src.signal import fair_value_line, trading_signal
 
@@ -19,19 +19,6 @@ def _price_text(item: MarketItem) -> str:
     if item.unit == "$":
         return f"{item.unit}{item.current_price:,.2f}"
     return f"{item.current_price:,.2f}{item.unit}"
-
-
-def _ma_text(item: MarketItem) -> str:
-    parts = []
-    for window in MA_WINDOWS:
-        result = moving_average_diff(item.close, window)
-        if result is None:
-            parts.append(f"MA{window} 데이터부족")
-            continue
-        _, diff_pct = result
-        position = "위" if diff_pct >= 0 else "아래"
-        parts.append(f"MA{window} {position} ({diff_pct:+.1f}%)")
-    return " / ".join(parts)
 
 
 def _volume_text(item: MarketItem) -> str:
@@ -91,7 +78,6 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>
       <div class="price">{_price_text(item)} <span class="change">({item.change_pct:+.2f}%)</span></div>
-      <div class="row">{_ma_text(item)}</div>
       <div class="row">RSI({RSI_PERIOD}) {rsi_text}</div>
       <div class="row">{_volume_text(item)}</div>{valuation_rows}
       {_disclosures_html(disclosures)}

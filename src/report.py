@@ -4,8 +4,8 @@ from __future__ import annotations
 import datetime as dt
 from typing import List
 
-from config import MA_WINDOWS, RSI_PERIOD
-from src.indicators import moving_average_diff, rsi, volume_change_pct
+from config import RSI_PERIOD
+from src.indicators import rsi, volume_change_pct
 from src.models import MarketItem
 from src.signal import fair_value_line, trading_signal
 
@@ -16,19 +16,6 @@ def _format_price(item: MarketItem) -> str:
     if item.unit == "$":
         return f"{item.unit}{item.current_price:,.2f}"
     return f"{item.current_price:,.2f}{item.unit}"
-
-
-def _format_ma_line(item: MarketItem) -> str:
-    parts = []
-    for window in MA_WINDOWS:
-        result = moving_average_diff(item.close, window)
-        if result is None:
-            parts.append(f"MA{window} 데이터부족")
-            continue
-        _, diff_pct = result
-        position = "위" if diff_pct >= 0 else "아래"
-        parts.append(f"MA{window} {position} ({diff_pct:+.1f}%)")
-    return " / ".join(parts)
 
 
 def _format_volume_line(item: MarketItem) -> str:
@@ -47,7 +34,6 @@ def format_item(item: MarketItem) -> str:
     lines = [
         f"■ {item.name} ({item.symbol})",
         f"현재가 {_format_price(item)} ({item.change_pct:+.2f}%)",
-        _format_ma_line(item),
         f"RSI({RSI_PERIOD}) {rsi_text}",
         _format_volume_line(item),
     ]

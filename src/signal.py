@@ -6,7 +6,7 @@ from typing import Optional
 from config import MA_WINDOWS, RSI_PERIOD
 from src.indicators import moving_average_diff, rsi
 from src.models import MarketItem
-from src.valuation import fair_value_inputs, median_fair_value, target_price
+from src.valuation import fair_value_inputs, m_grav_fair_value, median_fair_value, target_price
 
 # 과매수/과매도 판단에 쓰는 (기존 GRAV 모델) 적정주가 대비 괴리율 임계값(%)
 FAIR_VALUE_GAP_THRESHOLD = 30.0
@@ -23,19 +23,21 @@ def _format_price(value: float, unit: str) -> str:
 def fair_value_line(item: MarketItem) -> str:
     """리포트에 표시할 적정주가 요약 한 줄.
 
-    기존 GRAV 모델과, DCF/업종평균 상대가치를 합친 종합(median) 모델 두 값을
-    "적정주가 .. (괴리율 ..%)" 형태로 나란히 보여준다. 괴리율 = (현재가-적정주가)/적정주가.
+    기존 GRAV 모델, M-GRAV(해자 반영) 모델, 둘과 업종평균 상대가치를 합친
+    종합(median) 모델 값을 "적정주가(라벨) .. (괴리율 ..%)" 형태로 나란히
+    보여준다. 괴리율 = (현재가-적정주가)/적정주가.
     """
     inputs = fair_value_inputs(item)
     original = target_price(**inputs) if inputs else None
+    m_grav = m_grav_fair_value(item)
     combined = median_fair_value(item)
 
     parts = []
-    for value in (original, combined):
+    for label, value in (("GRAV", original), ("M-GRAV", m_grav), ("종합", combined)):
         if value is None:
             continue
         gap = (item.current_price - value) / value * 100
-        parts.append(f"적정주가 {_format_price(value, item.unit)} (괴리율 {gap:+.1f}%)")
+        parts.append(f"적정주가({label}) {_format_price(value, item.unit)} (괴리율 {gap:+.1f}%)")
 
     if not parts:
         return "적정주가 데이터 없음"
