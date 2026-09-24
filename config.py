@@ -18,6 +18,16 @@ US_STOCKS = {
     "MU": "마이크론",
     "SKHY": "SK하이닉스(나스닥)",
     "SPCX": "스페이스X",
+    "RKLB": "로켓랩",
+    "MRVL": "마벨 테크놀로지",
+    "LITE": "루멘텀",
+    "COHR": "코히런트",
+    "LLY": "일라이릴리",
+    "ANET": "아리스타 네트웍스",
+    "SNDK": "샌디스크",
+    "COST": "코스트코",
+    "CRDO": "크레도 테크놀로지",
+    "ALAB": "아스테라랩스",
 }
 
 # pykrx의 코스피 지수 조회 엔드포인트가 KRX 서버 세션 이슈로 불안정하여,
@@ -78,64 +88,22 @@ VALUATION = {
     "SKHY": {"growth_rate": 109.12, "beta": 2.395},
     # SPCX(스페이스X): 비상장 성격의 종목이라 Yahoo/Finviz/Seeking Alpha 어디에도
     # EPS 5년 성장률·베타가 공시되어 있지 않아 값을 채우지 않는다.
-    # (밸류에이션 데이터 미확보 -> fair_value_line에 "적정주가 데이터 없음"으로 표시)
-}
-
-# 업종 피어그룹 평균 배수 (src.valuation의 relative_per_fair_value /
-# relative_ev_ebitda_fair_value에서 사용). Finviz 개별 종목 페이지에서 동종업계
-# 피어그룹(5~8개사)의 trailing PER / EV-EBITDA를 모아 평균낸 값이다
-# (2026-09-06 기준 조사, 주기적 갱신 필요).
-#   - 반도체(000660·AVGO·NVDA·MU): NVDA,AVGO,MU,INTC,QCOM,TXN,AMD,TSM
-#   - 가전(005930·AAPL): AAPL,SONY
-#   - 자동차(005380·TSLA): GM,F,TM (테슬라 자신의 극단적 배수는 업종 평균을
-#     심하게 왜곡시켜 피어그룹에서 제외했다)
-#   - 인터넷소매(AMZN): AMZN,BABA,JD,EBAY,ETSY
-#   - 인터넷콘텐츠(GOOGL·META): GOOGL,META,PINS,BIDU
-#   - 소프트웨어(MSFT): MSFT,ORCL,CRM,ADBE,NOW
-# peer_ev_ebitda가 None인 항목은 원천 데이터가 깨져 있어(예: 000660은 yfinance
-# EBITDA 필드 자체가 오염돼 있음이 확인됨) 의도적으로 비워둔 것이다.
-RELATIVE_VALUATION = {
-    "005930": {"peer_per": 29.30, "peer_ev_ebitda": 27.93},
-    "000660": {"peer_per": 44.28, "peer_ev_ebitda": None},
-    "005380": {"peer_per": 24.15, "peer_ev_ebitda": 14.50},
-    "AAPL": {"peer_per": 29.30, "peer_ev_ebitda": 27.93},
-    "AMZN": {"peer_per": 22.45, "peer_ev_ebitda": 13.64},
-    "AVGO": {"peer_per": 44.28, "peer_ev_ebitda": 29.33},
-    "GOOGL": {"peer_per": 33.41, "peer_ev_ebitda": 24.69},
-    "META": {"peer_per": 33.41, "peer_ev_ebitda": 24.69},
-    "MSFT": {"peer_per": 36.48, "peer_ev_ebitda": 24.14},
-    "NVDA": {"peer_per": 44.28, "peer_ev_ebitda": 29.33},
-    "TSLA": {"peer_per": 24.15, "peer_ev_ebitda": 14.50},
-    "MU": {"peer_per": 44.28, "peer_ev_ebitda": 29.33},
-}
-
-# EV-EBITDA 상대가치가 쓰는 순부채(=이자부 차입금 - 현금성자산).
-# yfinance info["totalDebt"]는 리스부채(운용리스 포함)까지 합산해 순부채를
-# 크게 부풀리는 경우가 확인됐다(AMZN: yfinance 기준 순부채 ~$128.6B vs 실제
-# 10-Q 기준 ~$9.6B, 약 13배 과대). 그래서 리스부채를 뺀 순수 이자부 차입금
-# (단기차입금+유동성장기부채+사채+장기차입금 등)만 원문 재무제표에서 직접
-# 가져와 고정값으로 쓴다. 분기가 지나면 갱신 필요.
-#   - 국내 3종목: DART 반기보고서(2026-06-30, 연결기준 CFS)
-#   - 미국 9종목: SEC EDGAR XBRL companyfacts(가장 최근 10-Q, MSFT는 회계연도가
-#     6월 말이라 10-K)의 LongTermDebt(Noncurrent+Current)+ShortTermBorrowings류
-#     합계 - (CashAndCashEquivalents + 유동 MarketableSecurities/단기투자)
-# 단위: 원화 종목은 KRW, 미국 종목은 USD (원 단위, 백만/천 단위 아님)
-NET_DEBT = {
-    "005930": {"debt": 22_408_721_000_000, "cash": 189_953_028_000_000},  # 2026-06-30 DART 반기보고서
-    "000660": {"debt": 18_586_634_000_000, "cash": 87_957_923_000_000},  # 2026-06-30 DART 반기보고서
-    # SKHY(SK하이닉스 나스닥 ADR)는 본사와 동일 기업 - 000660과 같은 KRW 값.
-    # RELATIVE_VALUATION에 SKHY 항목이 없어 현재는 실사용되지 않는다.
-    "SKHY": {"debt": 18_586_634_000_000, "cash": 87_957_923_000_000},  # 2026-06-30 DART 반기보고서(000660과 동일)
-    "005380": {"debt": 188_805_180_000_000, "cash": 25_994_018_000_000},  # 2026-06-30 DART 반기보고서(현대캐피탈 등 금융자회사 여신부채 포함)
-    "AAPL": {"debt": 84_344_000_000, "cash": 62_399_000_000},  # 2026-06-27 10-Q
-    "AMZN": {"debt": 132_549_000_000, "cash": 122_988_000_000},  # 2026-06-30 10-Q
-    "AVGO": {"debt": 59_419_000_000, "cash": 23_975_000_000},  # 2026-08-02 10-Q
-    "GOOGL": {"debt": 100_164_000_000, "cash": 242_474_000_000},  # 2026-06-30 10-Q
-    "META": {"debt": 83_664_000_000, "cash": 90_260_000_000},  # 2026-06-30 10-Q
-    "MSFT": {"debt": 40_294_000_000, "cash": 76_843_000_000},  # 2026-06-30 10-K(FY26)
-    "NVDA": {"debt": 33_366_000_000, "cash": 56_586_000_000},  # 2026-07-26 10-Q
-    "TSLA": {"debt": 9_061_000_000, "cash": 43_524_000_000},  # 2026-06-30 10-Q
-    "MU": {"debt": 5_722_000_000, "cash": 24_995_000_000},  # 2026-05-28 10-Q
+    # (VALUATION 미확보 -> GRAV/M-GRAV 대신 Growth FV 모듈로 라우팅됨. src/growth_data.py 참고)
+    "MRVL": {"growth_rate": 53.85, "beta": 2.28},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "LITE": {"growth_rate": 76.28, "beta": 1.54},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "COHR": {"growth_rate": 48.98, "beta": 2.11},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "LLY": {"growth_rate": 30.55, "beta": 0.45},   # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "ANET": {"growth_rate": 28.98, "beta": 1.61},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    # SNDK(샌디스크): 2025년 WDC에서 스핀오프된 지 얼마 안 돼 beta가 아직 불안정할
+    # 수 있다(Finviz 5.20 - 다른 종목 대비 이례적으로 높음). 주기적으로 재확인 필요.
+    "SNDK": {"growth_rate": 54.54, "beta": 5.20},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "COST": {"growth_rate": 11.03, "beta": 0.88},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "CRDO": {"growth_rate": 52.78, "beta": 3.24},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    "ALAB": {"growth_rate": 64.96, "beta": 3.73},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
+    # RKLB(로켓랩): forward EPS가 소스마다 부호가 엇갈리고(Yahoo +0.046 vs
+    # Finviz 내년 EPS -0.04) EPS next 5Y 자체가 없어(적자 기업) GRAV에 넣지
+    # 않는다. TTM EBITDA 마진이 아직 음수라 Growth FV 2단계로 라우팅됨
+    # (config/growth_assumptions.yaml 참고).
 }
 
 # M-GRAV(해자 반영 GRAV) 모델 입력값 - DCF를 대체하는 종합모델 후보 (m-grave.jpeg 산식).
@@ -171,5 +139,16 @@ M_GRAV = {
     "TSLA": {"target_pe": None, "m_score": 48},    # FSD/배터리 기술력은 있으나 EV 경쟁 심화로 락인·이익률 약화 중. target_pe는 라이브 forward PE 사용
     "MU": {"target_pe": 12.0, "m_score": 49},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
     "SKHY": {"target_pe": 12.0, "m_score": 67},    # SK하이닉스(ADR), 000660과 동일 기업
-    # SPCX: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가(적정주가 데이터 없음).
+
+    # --- 2026-09-25 추가 (m_score는 2026-09-25 시점 사업 구조 기준 최초 산정) ---
+    "MRVL": {"target_pe": 30.0, "m_score": 66},    # AI 커스텀실리콘(AWS/구글向) 설계선점 + 광인터커넥트, OPM은 AVGO/NVDA 대비 한 단계 아래
+    "LITE": {"target_pe": 22.0, "m_score": 53},    # 광부품(데이터센터 광트랜시버) 기술력은 있으나 경쟁 심하고 수익성 변동성 큰 부품업체
+    "COHR": {"target_pe": 20.0, "m_score": 57},    # 소재~모듈 수직계열화된 포토닉스 업체(II-VI+Coherent 합병), 다각화로 락인은 중간
+    "LLY": {"target_pe": 30.0, "m_score": 82},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
+    "ANET": {"target_pe": 35.0, "m_score": 73},    # AI/클라우드 데이터센터 스위칭 선두, EOS 소프트웨어로 배포 후 전환비용 큼, OPM 최상위권
+    "SNDK": {"target_pe": None, "m_score": 41},    # NAND는 사실상 범용재라 기술/락인 해자 약하고 사이클 마진(현재 EBITDA 62%는 업사이클 고점). target_pe는 라이브 forward PE 사용
+    "COST": {"target_pe": 35.0, "m_score": 52},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
+    "CRDO": {"target_pe": 18.0, "m_score": 58},    # AI 인터커넥트용 SerDes/AEC 설계선점, OPM은 양호하나 소형주라 대형 경쟁사(AVGO/MRVL) 대비 해자 얕음
+    "ALAB": {"target_pe": 45.0, "m_score": 61},    # PCIe/CXL 리타이머로 Nvidia AI 서버 생태계에 초기 선점, 아직 스케일업 중이라 OPM 체력은 진행형
+    # SPCX/RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (Growth FV 모듈로 대체, src/growth_data.py 참고).
 }
