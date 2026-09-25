@@ -11,8 +11,12 @@ from src.models import MarketItem
 from src.rsi50 import rsi50_fair_value
 from src.valuation import fair_value_inputs, m_grav_fair_value, target_price
 
-# 과매수/과매도 판단에 쓰는 (기존 GRAV 모델) 적정주가 대비 괴리율 임계값(%)
-FAIR_VALUE_GAP_THRESHOLD = 30.0
+# 매수/매도 관점 판단 기준 (GRAV·M-GRAV·Growth FV 공통)
+#   매수 관점 우세: RSI(14) < RSI_OVERSOLD  이고 적정주가 대비 괴리율 <= -FAIR_VALUE_GAP_THRESHOLD
+#   매도 관점 우세: RSI(14) > RSI_OVERBOUGHT 이고 적정주가 대비 괴리율 >= +FAIR_VALUE_GAP_THRESHOLD
+FAIR_VALUE_GAP_THRESHOLD = 10.0
+RSI_OVERSOLD = 30.0
+RSI_OVERBOUGHT = 70.0
 
 # 적정주가 표시에 쓰는 Growth FV 단계. 3단계(매출 미미, TAM·성공확률 가정에
 # 거의 전적으로 의존)는 가정 민감도가 너무 커서 RSI50 평균가로 대신한다.
@@ -87,13 +91,28 @@ def _rsi50_fair_value_line(item: MarketItem) -> Optional[str]:
     )
 
 
-def _fair_value_gap_pct(item: MarketItem) -> Optional[float]:
-    """(기존 GRAV 모델) 현재가가 적정주가 대비 몇 % 위/아래에 있는지."""
+def _model_gaps(item: MarketItem) -> list[tuple[str, float]]:
+    """매수/매도 판단에 쓰는 (모델 라벨, 괴리율%) 목록.
+
+    fair_value_line과 같은 우선순위로, GRAV·M-GRAV 중 구할 수 있는 값을 모두
+    쓰고 둘 다 없을 때만 Growth FV(1·2단계)를 쓴다. RSI50 평균가는 추세 중심
+    가격이지 기업가치 추정이 아니라서 판단에 넣지 않는다(legacy 신호로 폴백).
+    """
     inputs = fair_value_inputs(item)
-    if inputs is None:
-        return None
-    tp = target_price(**inputs)
-    return (item.current_price - tp) / tp * 100
+    gaps = []
+    for label, value in (
+        ("GRAV", target_price(**inputs) if inputs else None),
+        ("M-GRAV", m_grav_fair_value(item)),
+    ):
+        if value:
+            gaps.append((label, (item.current_price - value) / value * 100))
+    if gaps:
+        return gaps
+
+    growth = growth_fair_value(item)
+    if growth is not None and growth.stage in GROWTH_FV_STAGES:
+        return [("Growth FV", growth.gap_pct)]
+    return []
 
 
 def _legacy_ma_rsi_signal(item: MarketItem) -> Optional[str]:
@@ -119,60 +138,34 @@ def _legacy_ma_rsi_signal(item: MarketItem) -> Optional[str]:
     return None
 
 
-def _growth_fv_signal(item: MarketItem) -> Optional[str]:
-    """Growth FV 역산 괴리 + RSI50(중심선 50 기준) 조합 참고 신호.
+def trading_signal(item: MarketItem) -> Optional[str]:
+    """적정주가(GRAV·M-GRAV·Growth FV) 대비 괴리율 + RSI(14)로 매수/매도 관점을 판단한다.
 
-    GRAV의 RSI(14) 70/30 과매수/과매도 임계값과 달리, Growth FV 대상 성장주는
-    RSI(14)가 추세 중심선인 50을 기준으로 방향을 봐야 자연스러워(spec §7의
-    RSI50 관점과 동일선상) 여기서는 50을 임계값으로 쓴다. spec §10에 따라
-    FV 자체는 가정값에 크게 흔들리는 추정치라 확정 매수/매도 신호가 아니라
-    참고 신호로만 노출한다.
+    - 매수 관점 우세: RSI < 30 이고, 적정주가보다 10% 이상 싼 모델이 하나 이상
+    - 매도 관점 우세: RSI > 70 이고, 적정주가보다 10% 이상 비싼 모델이 하나 이상
+    - 모델마다 따로 판정해 조건을 충족한 모델과 그 괴리율을 함께 표시한다.
+    - 그 외(중립/판단보류)에는 화면에 굳이 띄우지 않도록 None을 반환한다.
+
+    적정주가 모델을 하나도 못 쓰는 종목은 legacy MA/RSI 신호로 폴백한다.
     """
-    growth = growth_fair_value(item)
-    if growth is None or growth.stage not in GROWTH_FV_STAGES:
-        return None
+    gaps = _model_gaps(item)
+    if not gaps:
+        return _legacy_ma_rsi_signal(item)
 
     rsi_value = rsi(item.close, RSI_PERIOD)
     if rsi_value is None:
         return None
 
-    rsi50 = growth.rsi50
-    ref_price = rsi50.avg_cross if rsi50.avg_cross == rsi50.avg_cross else rsi50.avg_p50
-    ref_note = ""
-    if ref_price == ref_price:  # NaN이 아니면
-        ref_gap = (item.current_price - ref_price) / ref_price * 100
-        ref_note = f", RSI50 평균가 대비 {ref_gap:+.1f}%"
-
-    if growth.gap_pct >= FAIR_VALUE_GAP_THRESHOLD and rsi_value > 50:
-        return f"RSI {rsi_value:.1f}{ref_note}"
-    if growth.gap_pct <= -FAIR_VALUE_GAP_THRESHOLD and rsi_value < 50:
-        return f"RSI {rsi_value:.1f}{ref_note}"
-    return None
-
-
-def trading_signal(item: MarketItem) -> Optional[str]:
-    """(기존 GRAV 모델) 적정주가 대비 괴리율 + RSI 조합으로 매수/매도 관점을 판단한다.
-
-    - 과매수(매도 관점 우세): 현재가가 적정주가보다 30%p 이상 높고 RSI > 70
-    - 과매도(매수 관점 우세): 현재가가 적정주가보다 30%p 이상 낮고 RSI < 30
-    - 그 외(중립/판단보류)에는 화면에 굳이 띄우지 않도록 None을 반환한다.
-
-    GRAV를 못 쓰는 종목은 Growth FV + RSI50 참고 신호(_growth_fv_signal)로,
-    그마저 안 되면(성장주 가정값도 없는 종목) legacy MA/RSI 신호로 폴백한다.
-    """
-    if fair_value_inputs(item) is None:
-        growth_signal = _growth_fv_signal(item)
-        if growth_signal is not None:
-            return growth_signal
-        return _legacy_ma_rsi_signal(item)
-
-    gap_pct = _fair_value_gap_pct(item)
-    rsi_value = rsi(item.close, RSI_PERIOD)
-    if gap_pct is None or rsi_value is None:
+    if rsi_value < RSI_OVERSOLD:
+        view = "매수 관점 우세"
+        hits = [(label, gap) for label, gap in gaps if gap <= -FAIR_VALUE_GAP_THRESHOLD]
+    elif rsi_value > RSI_OVERBOUGHT:
+        view = "매도 관점 우세"
+        hits = [(label, gap) for label, gap in gaps if gap >= FAIR_VALUE_GAP_THRESHOLD]
+    else:
         return None
 
-    if gap_pct >= FAIR_VALUE_GAP_THRESHOLD and rsi_value > 70:
-        return f"RSI {rsi_value:.1f}"
-    if gap_pct <= -FAIR_VALUE_GAP_THRESHOLD and rsi_value < 30:
-        return f"RSI {rsi_value:.1f}"
-    return None
+    if not hits:
+        return None
+    detail = ", ".join(f"{label} 괴리율 {gap:+.1f}%" for label, gap in hits)
+    return f"{view} (RSI {rsi_value:.1f} · {detail})"

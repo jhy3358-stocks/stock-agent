@@ -58,3 +58,61 @@ def test_no_data_message_when_rsi50_also_fails(monkeypatch):
     monkeypatch.setattr(signal, "growth_fair_value", lambda item: None)
     monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(float("nan"), 0, float("nan"), True))
     assert signal.fair_value_line(_item()) == "적정주가 데이터 없음"
+
+
+# ---------------------------------------------------------------------------
+# trading_signal: GRAV·M-GRAV·Growth FV 공통 매수/매도 관점 조건
+#   매수: RSI < 30 & 괴리율 <= -10%, 매도: RSI > 70 & 괴리율 >= +10%
+# ---------------------------------------------------------------------------
+
+def _set_models(monkeypatch, grav=None, m_grav=None, growth=None, rsi_value=50.0):
+    monkeypatch.setattr(
+        signal, "fair_value_inputs",
+        lambda item: None if grav is None else {"forward_eps": grav, "forward_pe": 1.0, "growth_rate": 0.0, "beta": 1.0},
+    )
+    monkeypatch.setattr(signal, "m_grav_fair_value", lambda item: m_grav)
+    monkeypatch.setattr(signal, "growth_fair_value", lambda item: growth)
+    monkeypatch.setattr(signal, "rsi", lambda close, period: rsi_value)
+
+
+def test_buy_when_rsi_below_30_and_each_model_10pct_cheap(monkeypatch):
+    # 현재가 110: GRAV 125 -> -12.0%, M-GRAV 200 -> -45.0%
+    _set_models(monkeypatch, grav=125.0, m_grav=200.0, rsi_value=25.0)
+    assert signal.trading_signal(_item()) == "매수 관점 우세 (RSI 25.0 · GRAV 괴리율 -12.0%, M-GRAV 괴리율 -45.0%)"
+
+
+def test_buy_lists_only_models_meeting_gap(monkeypatch):
+    # GRAV 115 -> -4.3%(미충족), M-GRAV 200 -> -45.0%(충족)
+    _set_models(monkeypatch, grav=115.0, m_grav=200.0, rsi_value=25.0)
+    assert signal.trading_signal(_item()) == "매수 관점 우세 (RSI 25.0 · M-GRAV 괴리율 -45.0%)"
+
+
+def test_sell_when_rsi_above_70_and_model_10pct_expensive(monkeypatch):
+    # GRAV 100 -> +10.0%(경계 포함)
+    _set_models(monkeypatch, grav=100.0, rsi_value=75.0)
+    assert signal.trading_signal(_item()) == "매도 관점 우세 (RSI 75.0 · GRAV 괴리율 +10.0%)"
+
+
+def test_no_signal_when_rsi_neutral(monkeypatch):
+    _set_models(monkeypatch, grav=200.0, m_grav=200.0, rsi_value=45.0)
+    assert signal.trading_signal(_item()) is None
+
+
+def test_no_signal_when_gap_within_10pct(monkeypatch):
+    _set_models(monkeypatch, grav=105.0, m_grav=115.0, rsi_value=80.0)  # +4.8%, -4.3%
+    assert signal.trading_signal(_item()) is None
+
+
+def test_growth_fv_uses_same_30_70_thresholds(monkeypatch):
+    growth = SimpleNamespace(stage=2, fv=80.0, gap_pct=37.5, required={})
+    _set_models(monkeypatch, growth=growth, rsi_value=72.0)
+    assert signal.trading_signal(_item()) == "매도 관점 우세 (RSI 72.0 · Growth FV 괴리율 +37.5%)"
+    _set_models(monkeypatch, growth=growth, rsi_value=60.0)  # 예전 RSI50 기준이면 신호였음
+    assert signal.trading_signal(_item()) is None
+
+
+def test_growth_stage3_not_used_for_signal(monkeypatch):
+    growth = SimpleNamespace(stage=3, fv=80.0, gap_pct=37.5, required={})
+    _set_models(monkeypatch, growth=growth, rsi_value=72.0)
+    monkeypatch.setattr(signal, "_legacy_ma_rsi_signal", lambda item: "legacy")
+    assert signal.trading_signal(_item()) == "legacy"
