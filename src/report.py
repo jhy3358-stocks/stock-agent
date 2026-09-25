@@ -5,37 +5,17 @@ import datetime as dt
 from typing import List
 
 from config import RSI_PERIOD
-from src.indicators import rsi, volume_change_pct
+from src.formatting import format_price, rsi_text, volume_text
 from src.models import MarketItem
 from src.signal import fair_value_line, trading_signal
 
 
-def _format_price(item: MarketItem) -> str:
-    if item.unit == "원":
-        return f"{item.current_price:,.0f}{item.unit}"
-    if item.unit == "$":
-        return f"{item.unit}{item.current_price:,.2f}"
-    return f"{item.current_price:,.2f}{item.unit}"
-
-
-def _format_volume_line(item: MarketItem) -> str:
-    if item.volume is None or len(item.volume) == 0:
-        return "거래량 정보 없음"
-    latest_volume = item.volume.iloc[-1]
-    change = volume_change_pct(item.volume)
-    if change is None:
-        return f"거래량 {latest_volume:,.0f}"
-    return f"거래량 {latest_volume:,.0f} (전일대비 {change:+.1f}%)"
-
-
 def format_item(item: MarketItem) -> str:
-    rsi_value = rsi(item.close, RSI_PERIOD)
-    rsi_text = f"{rsi_value:.1f}" if rsi_value is not None else "데이터부족"
     lines = [
         f"■ {item.name} ({item.symbol})",
-        f"현재가 {_format_price(item)} ({item.change_pct:+.2f}%)",
-        f"RSI({RSI_PERIOD}) {rsi_text}",
-        _format_volume_line(item),
+        f"현재가 {format_price(item.current_price, item.unit)} ({item.change_pct:+.2f}%)",
+        f"RSI({RSI_PERIOD}) {rsi_text(item)}",
+        volume_text(item),
     ]
     if item.market != "INDEX":
         lines.append(fair_value_line(item))

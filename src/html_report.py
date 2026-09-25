@@ -3,69 +3,35 @@ from __future__ import annotations
 
 import datetime as dt
 import html
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 from config import RSI_PERIOD
-from src.indicators import rsi, volume_change_pct
+from src.formatting import format_price, rsi_text, volume_text
 from src.models import MarketItem
 from src.signal import fair_value_line, trading_signal
 
 DisclosureMap = Dict[str, List[dict]]
 
 
-def _price_text(item: MarketItem) -> str:
-    if item.unit == "원":
-        return f"{item.current_price:,.0f}{item.unit}"
-    if item.unit == "$":
-        return f"{item.unit}{item.current_price:,.2f}"
-    return f"{item.current_price:,.2f}{item.unit}"
-
-
-def _volume_text(item: MarketItem) -> str:
-    if item.volume is None or len(item.volume) == 0:
-        return "거래량 정보 없음"
-    latest_volume = item.volume.iloc[-1]
-    change = volume_change_pct(item.volume)
-    if change is None:
-        return f"거래량 {latest_volume:,.0f}"
-    return f"거래량 {latest_volume:,.0f} (전일대비 {change:+.1f}%)"
-
-
-def _disclosures_html(disclosures: List[dict]) -> str:
-    if not disclosures:
-        return ""
+def _link_list_html(title: str, entries: List[dict], prefix: Callable[[dict], str]) -> str:
+    """카드 하단의 링크 목록(최근 공시/관련 뉴스). 각 항목 앞에 prefix(entry)를 붙인다."""
     items = "\n".join(
-        f'<li><a href="{html.escape(d["url"])}" target="_blank" rel="noopener">'
-        f'{html.escape(d["date"].strftime("%m/%d"))} {html.escape(d["title"])}</a></li>'
-        for d in disclosures
+        f'<li><a href="{html.escape(e["url"])}" target="_blank" rel="noopener">'
+        f'{html.escape(prefix(e))} {html.escape(e["title"])}</a></li>'
+        for e in entries
+        if e.get("url")
     )
+    if not items:
+        return ""
     return f"""
       <div class="disclosures">
-        <div class="disclosures-title">최근 공시</div>
-        <ul>{items}</ul>
-      </div>"""
-
-
-def _news_html(news: List[dict]) -> str:
-    if not news:
-        return ""
-    items = "\n".join(
-        f'<li><a href="{html.escape(n["url"])}" target="_blank" rel="noopener">'
-        f'[{html.escape(n["source"])}] {html.escape(n["title"])}</a></li>'
-        for n in news
-        if n.get("url")
-    )
-    return f"""
-      <div class="disclosures">
-        <div class="disclosures-title">관련 뉴스</div>
+        <div class="disclosures-title">{title}</div>
         <ul>{items}</ul>
       </div>"""
 
 
 def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> str:
     direction = "up" if item.change_pct >= 0 else "down"
-    rsi_value = rsi(item.close, RSI_PERIOD)
-    rsi_text = f"{rsi_value:.1f}" if rsi_value is not None else "데이터부족"
     valuation_rows = ""
     if item.market != "INDEX":
         valuation_rows = f"""
@@ -77,11 +43,11 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
     return f"""
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>
-      <div class="price">{_price_text(item)} <span class="change">({item.change_pct:+.2f}%)</span></div>
-      <div class="row">RSI({RSI_PERIOD}) {rsi_text}</div>
-      <div class="row">{_volume_text(item)}</div>{valuation_rows}
-      {_disclosures_html(disclosures)}
-      {_news_html(news)}
+      <div class="price">{format_price(item.current_price, item.unit)} <span class="change">({item.change_pct:+.2f}%)</span></div>
+      <div class="row">RSI({RSI_PERIOD}) {rsi_text(item)}</div>
+      <div class="row">{volume_text(item)}</div>{valuation_rows}
+      {_link_list_html("최근 공시", disclosures, lambda d: d["date"].strftime("%m/%d"))}
+      {_link_list_html("관련 뉴스", news, lambda n: f"[{n['source']}]")}
     </div>"""
 
 

@@ -88,8 +88,8 @@ def rsi50_fair_value(result: Rsi50Result) -> Optional[tuple[float, str]]:
     한쪽으로만 추세가 이어져 교차점이 없으면 역산 P50 평균(방법 B)을 쓴다.
     둘 다 없거나 0 이하면 None.
     """
-    if result.avg_cross == result.avg_cross and result.avg_cross > 0:
+    if pd.notna(result.avg_cross) and result.avg_cross > 0:
         return result.avg_cross, "교차점 평균"
-    if result.avg_p50 == result.avg_p50 and result.avg_p50 > 0:
+    if pd.notna(result.avg_p50) and result.avg_p50 > 0:
         return result.avg_p50, "P50 역산 평균"
     return None

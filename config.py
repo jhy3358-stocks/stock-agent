@@ -118,7 +118,7 @@ VALUATION = {
     # (config/growth_assumptions.yaml 참고).
 }
 
-# M-GRAV(해자 반영 GRAV) 모델 입력값 - DCF를 대체하는 종합모델 후보 (m-grave.jpeg 산식).
+# M-GRAV(해자 반영 GRAV) 모델 입력값.
 #   적정주가 = Forward EPS x Target P/E x (1 + g/100) / beta^(1/m_factor)
 #   Forward EPS는 기존 GRAV와 동일하게 실행 시 Yahoo/Finviz 라이브 평균을 쓰고,
 #   g(성장률)·beta는 위 VALUATION 값을 그대로 재사용한다.

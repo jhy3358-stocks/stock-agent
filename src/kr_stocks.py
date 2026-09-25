@@ -20,21 +20,7 @@ def fetch_kr_stock(code: str, name: str) -> MarketItem:
     fromdate, todate = _date_range()
     df = stock.get_market_ohlcv_by_date(fromdate, todate, code)
     df = df[df["종가"] > 0]
-    close = df["종가"]
-    volume = df["거래량"]
-    current_price = float(close.iloc[-1])
-    prev_price = float(close.iloc[-2])
-    change_pct = (current_price - prev_price) / prev_price * 100
-    return MarketItem(
-        name=name,
-        symbol=code,
-        market="KR",
-        close=close,
-        volume=volume,
-        current_price=current_price,
-        change_pct=change_pct,
-        unit="원",
-    )
+    return MarketItem.from_close(name, code, "KR", df["종가"], df["거래량"], "원")
 
 
 def fetch_all_kr_stocks() -> list[MarketItem]:

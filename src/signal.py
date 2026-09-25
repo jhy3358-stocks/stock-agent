@@ -1,12 +1,14 @@
-"""적정주가(GRAV 모델 + M-GRAV 모델 + 성장주 Growth FV) 기반 밸류에이션 표시와
-RSI 결합 매수/매도 참고 신호."""
+"""적정주가(GRAV 모델 + M-GRAV 모델 + 성장주 Growth FV, 최후 폴백으로 RSI50 평균가)
+기반 밸류에이션 표시와 RSI 결합 매수/매도 참고 신호."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Optional
 
 from config import MA_WINDOWS, RSI_PERIOD
+from src.formatting import format_price
 from src.growth_data import growth_fair_value, item_rsi50, required_condition_text
-from src.indicators import moving_average_diff, rsi
+from src.indicators import gap_pct, moving_average_diff, rsi
 from src.models import MarketItem
 from src.rsi50 import rsi50_fair_value
 from src.valuation import fair_value_inputs, m_grav_fair_value, target_price
@@ -18,48 +20,63 @@ FAIR_VALUE_GAP_THRESHOLD = 10.0
 RSI_OVERSOLD = 30.0
 RSI_OVERBOUGHT = 70.0
 
-# 적정주가 표시에 쓰는 Growth FV 단계. 3단계(매출 미미, TAM·성공확률 가정에
-# 거의 전적으로 의존)는 가정 민감도가 너무 커서 RSI50 평균가로 대신한다.
+# 적정주가 표시·매매 신호에 쓰는 Growth FV 단계. 3단계(매출 미미, TAM·성공확률
+# 가정에 거의 전적으로 의존)는 가정 민감도가 너무 커서 RSI50 평균가로 대신한다.
 GROWTH_FV_STAGES = (1, 2)
 
 
-def _format_price(value: float, unit: str) -> str:
-    if unit == "원":
-        return f"{value:,.0f}{unit}"
-    if unit == "$":
-        return f"{unit}{value:,.2f}"
-    return f"{value:,.2f}{unit}"
+@dataclass
+class _Valuation:
+    label: str  # 매매 신호에 표시하는 모델명
+    value: float
+    gap: float  # (현재가-적정주가)/적정주가 * 100
+    display_label: str  # 적정주가 줄에 표시하는 라벨
+    suffix: str = ""  # 적정주가 줄 뒤에 덧붙이는 설명 (Growth FV 역산 필요조건)
+
+
+def _valuations(item: MarketItem) -> list[_Valuation]:
+    """기업가치 기반 적정주가 목록 (적정주가 줄과 매매 신호가 공유하는 우선순위).
+
+    GRAV·M-GRAV 중 구할 수 있는 값을 모두 쓰고, 둘 다 없을 때만 Growth FV
+    (1·2단계)를 쓴다. spec §10에 따라 Growth FV는 "가정 기반 추정"임을 표시하고
+    역산 필요조건을 함께 보여준다. RSI50 평균가는 추세 중심 가격이지 기업가치
+    추정이 아니라서 여기에 넣지 않는다(적정주가 줄에서만 최후 폴백으로 표시).
+    """
+    inputs = fair_value_inputs(item)
+    result = []
+    for label, value in (
+        ("GRAV", target_price(**inputs) if inputs else None),
+        ("M-GRAV", m_grav_fair_value(item)),
+    ):
+        if value:
+            result.append(_Valuation(label, value, gap_pct(item.current_price, value), label))
+    if result:
+        return result
+
+    growth = growth_fair_value(item)
+    if growth is not None and growth.stage in GROWTH_FV_STAGES:
+        return [
+            _Valuation(
+                "Growth FV",
+                growth.fv,
+                growth.gap_pct,
+                "Growth FV, 가정 기반 추정",
+                f" · {required_condition_text(growth)}",
+            )
+        ]
+    return []
 
 
 def fair_value_line(item: MarketItem) -> str:
     """리포트에 표시할 적정주가 요약 한 줄.
 
-    기존 GRAV 모델과 M-GRAV(해자 반영) 모델 값을 "적정주가(라벨) ..
-    (괴리율 ..%)" 형태로 나란히 보여준다. 괴리율 = (현재가-적정주가)/적정주가.
-    둘 다 못 구하는 종목(SPCX 등 forward EPS 커버리지가 없는 성장주)은
-    docs/growth_valuation_spec.md의 Growth FV 모듈(1·2단계)로 대체하고, spec §10에
-    따라 "가정 기반 추정"임을 함께 표시하며 역산 필요조건을 괴리율과 나란히 보여준다.
-    그마저 안 되면 RSI50 평균가(추세 중심 가격)를 적정주가로 표시한다.
+    "적정주가(라벨) .. (괴리율 ..%)" 형태로 _valuations()의 값을 나란히 보여주고,
+    하나도 없으면 RSI50 평균가(추세 중심 가격)를 적정주가로 표시한다.
     """
-    inputs = fair_value_inputs(item)
-    original = target_price(**inputs) if inputs else None
-    m_grav = m_grav_fair_value(item)
-
-    parts = []
-    for label, value in (("GRAV", original), ("M-GRAV", m_grav)):
-        if value is None:
-            continue
-        gap = (item.current_price - value) / value * 100
-        parts.append(f"적정주가({label}) {_format_price(value, item.unit)} (괴리율 {gap:+.1f}%)")
-
-    if not parts:
-        growth = growth_fair_value(item)
-        if growth is not None and growth.stage in GROWTH_FV_STAGES:
-            parts.append(
-                f"적정주가(Growth FV, 가정 기반 추정) {_format_price(growth.fv, item.unit)} "
-                f"(괴리율 {growth.gap_pct:+.1f}%) · {required_condition_text(growth)}"
-            )
-
+    parts = [
+        f"적정주가({v.display_label}) {format_price(v.value, item.unit)} (괴리율 {v.gap:+.1f}%){v.suffix}"
+        for v in _valuations(item)
+    ]
     if not parts:
         rsi50_line = _rsi50_fair_value_line(item)
         if rsi50_line is not None:
@@ -81,42 +98,17 @@ def _rsi50_fair_value_line(item: MarketItem) -> Optional[str]:
     if fair is None:
         return None
     value, method = fair
-    gap = (item.current_price - value) / value * 100
     notes = [method]
     if result.data_insufficient:
         notes.append("이력 짧음")
     return (
         f"적정주가(RSI50 평균가, 추세 기준·{'/'.join(notes)}) "
-        f"{_format_price(value, item.unit)} (괴리율 {gap:+.1f}%)"
+        f"{format_price(value, item.unit)} (괴리율 {gap_pct(item.current_price, value):+.1f}%)"
     )
 
 
-def _model_gaps(item: MarketItem) -> list[tuple[str, float]]:
-    """매수/매도 판단에 쓰는 (모델 라벨, 괴리율%) 목록.
-
-    fair_value_line과 같은 우선순위로, GRAV·M-GRAV 중 구할 수 있는 값을 모두
-    쓰고 둘 다 없을 때만 Growth FV(1·2단계)를 쓴다. RSI50 평균가는 추세 중심
-    가격이지 기업가치 추정이 아니라서 판단에 넣지 않는다(legacy 신호로 폴백).
-    """
-    inputs = fair_value_inputs(item)
-    gaps = []
-    for label, value in (
-        ("GRAV", target_price(**inputs) if inputs else None),
-        ("M-GRAV", m_grav_fair_value(item)),
-    ):
-        if value:
-            gaps.append((label, (item.current_price - value) / value * 100))
-    if gaps:
-        return gaps
-
-    growth = growth_fair_value(item)
-    if growth is not None and growth.stage in GROWTH_FV_STAGES:
-        return [("Growth FV", growth.gap_pct)]
-    return []
-
-
 def _legacy_ma_rsi_signal(item: MarketItem) -> Optional[str]:
-    """적정주가 데이터가 없는 종목(예: SPCX)에 대한 RSI/이동평균 기반 대체 신호."""
+    """적정주가 데이터가 없는 종목에 대한 RSI/이동평균 기반 대체 신호."""
     score = 0
 
     rsi_value = rsi(item.close, RSI_PERIOD)
@@ -148,8 +140,8 @@ def trading_signal(item: MarketItem) -> Optional[str]:
 
     적정주가 모델을 하나도 못 쓰는 종목은 legacy MA/RSI 신호로 폴백한다.
     """
-    gaps = _model_gaps(item)
-    if not gaps:
+    valuations = _valuations(item)
+    if not valuations:
         return _legacy_ma_rsi_signal(item)
 
     rsi_value = rsi(item.close, RSI_PERIOD)
@@ -158,14 +150,14 @@ def trading_signal(item: MarketItem) -> Optional[str]:
 
     if rsi_value < RSI_OVERSOLD:
         view = "매수 관점 우세"
-        hits = [(label, gap) for label, gap in gaps if gap <= -FAIR_VALUE_GAP_THRESHOLD]
+        hits = [v for v in valuations if v.gap <= -FAIR_VALUE_GAP_THRESHOLD]
     elif rsi_value > RSI_OVERBOUGHT:
         view = "매도 관점 우세"
-        hits = [(label, gap) for label, gap in gaps if gap >= FAIR_VALUE_GAP_THRESHOLD]
+        hits = [v for v in valuations if v.gap >= FAIR_VALUE_GAP_THRESHOLD]
     else:
         return None
 
     if not hits:
         return None
-    detail = ", ".join(f"{label} 괴리율 {gap:+.1f}%" for label, gap in hits)
+    detail = ", ".join(f"{v.label} 괴리율 {v.gap:+.1f}%" for v in hits)
     return f"{view} (RSI {rsi_value:.1f} · {detail})"

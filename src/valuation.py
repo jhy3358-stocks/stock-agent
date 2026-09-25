@@ -20,33 +20,18 @@ import math
 from functools import lru_cache
 from typing import Optional
 
-import yfinance as yf
-
 from config import M_GRAV, VALUATION
 from src.finviz_client import fetch_forward_metrics
 from src.models import MarketItem
+from src.yf_data import yahoo_info, yahoo_ticker
 
 
-def _yahoo_ticker(item: MarketItem) -> str:
-    return f"{item.symbol}.KS" if item.market == "KR" else item.symbol
-
-
-@lru_cache(maxsize=None)
-def _yahoo_info(yahoo_ticker: str) -> dict:
-    """yfinance .info 스냅샷. 실패 시 빈 dict (호출부에서 .get으로 안전하게 처리)."""
-    try:
-        return yf.Ticker(yahoo_ticker).info
-    except Exception:
-        return {}
-
-
-def _yahoo_forward_metrics(yahoo_ticker: str) -> tuple[Optional[float], Optional[float]]:
+def _yahoo_forward_metrics(ticker: str) -> tuple[Optional[float], Optional[float]]:
     """(forward_pe, forward_eps). yfinance 조회 실패 시 (None, None)."""
-    info = _yahoo_info(yahoo_ticker)
+    info = yahoo_info(ticker)
     return (info.get("forwardPE"), info.get("forwardEps"))
 
 
-@lru_cache(maxsize=None)
 @lru_cache(maxsize=None)
 def _finviz_forward_metrics(symbol: str) -> tuple[Optional[float], Optional[float]]:
     """(forward_pe, forward_eps). Finviz 조회 실패/미지원 시 (None, None)."""
@@ -66,7 +51,7 @@ def _forward_eps_pe(item: MarketItem) -> tuple[Optional[float], Optional[float]]
 
     둘 중 한쪽만 있으면 그 값을 그대로 쓰고, 둘 다 없으면 (None, None).
     """
-    yahoo_pe, yahoo_eps = _yahoo_forward_metrics(_yahoo_ticker(item))
+    yahoo_pe, yahoo_eps = _yahoo_forward_metrics(yahoo_ticker(item.symbol, item.market))
     # Finviz는 KRX 상장 종목을 다루지 않는다 (KR 종목은 Yahoo 단일 소스로 대체).
     if item.market == "KR":
         finviz_pe, finviz_eps = (None, None)
@@ -106,10 +91,9 @@ def target_price(forward_eps: float, forward_pe: float, growth_rate: float, beta
     return forward_eps * forward_pe * (1 + growth_rate / 100) / math.sqrt(beta)
 
 
-# DCF/상대가치는 yfinance 재무제표(순이익·EBITDA·FCF·주식수) 원본에 의존하는데,
-# ADR 종목(예: SKHY)처럼 통화/단위가 뒤섞여 자릿수 자체가 틀어지는 경우가
-# 확인됐다. 결과가 현재가와 자릿수가 다르게 튀면(10배 이상 차이) 계산이 아니라
-# 데이터 오염으로 보고 버린다.
+# yfinance 원본 데이터는 ADR 종목(예: SKHY)처럼 통화/단위가 뒤섞여 자릿수
+# 자체가 틀어지는 경우가 확인됐다. M-GRAV 결과가 현재가와 자릿수가 다르게
+# 튀면(10배 이상 차이) 계산이 아니라 데이터 오염으로 보고 버린다.
 _SANITY_BAND = 10
 
 

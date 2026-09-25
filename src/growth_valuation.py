@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
@@ -74,21 +75,26 @@ class GrowthAssumptions:
     pe_mature: Optional[float] = None
 
 
+@lru_cache(maxsize=None)
+def _load_config(path: Path) -> dict:
+    """가정값 YAML은 실행 중 바뀌지 않아 경로별로 한 번만 읽는다."""
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
 def ticker_configured(ticker: str, path: Path = _CONFIG_PATH) -> bool:
     """config/growth_assumptions.yaml에 이 티커의 가정값이 있는지.
 
     §1 라우팅(GRAV 불가 -> Growth FV)에서, 종목별 가정값이 없으면 이 모듈이
-    아무것도 계산할 수 없으므로 호출부가 legacy 신호로 폴백할지 판단하는 데 쓴다.
+    아무것도 계산할 수 없으므로 호출부가 다음 폴백(RSI50 평균가)으로 넘어갈지
+    판단하는 데 쓴다.
     """
-    with open(path, "r", encoding="utf-8") as f:
-        raw = yaml.safe_load(f) or {}
-    return ticker in raw and ticker != "defaults"
+    return ticker in _load_config(path) and ticker != "defaults"
 
 
 def load_assumptions(ticker: str, path: Path = _CONFIG_PATH) -> GrowthAssumptions:
     """config/growth_assumptions.yaml에서 defaults + 종목별 값을 합쳐 읽는다."""
-    with open(path, "r", encoding="utf-8") as f:
-        raw = yaml.safe_load(f) or {}
+    raw = _load_config(path)
     merged = {**raw.get("defaults", {}), **raw.get(ticker, {})}
     segments = [Segment(**seg) for seg in merged.get("segments", [])]
     return GrowthAssumptions(

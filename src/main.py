@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -60,6 +61,31 @@ def _resolve_report_page_url() -> str:
     return "https://github.com"
 
 
+def _collect_index_news(naver_credentials: Optional[tuple[str, str]]) -> dict:
+    """주요 지수 카드 뉴스. 미국 지수는 Yahoo, 국내 지수는 네이버(인증키가 있을 때).
+
+    지수끼리 같은 시황 기사가 겹치는 일이 잦아, 후보를 넉넉히 받아둔 뒤 INDICES
+    순서대로 중복을 걸러 지수별 INDEX_NEWS_LIMIT개씩 채운다.
+    """
+    logger.info("주요 지수 뉴스 조회 중...")
+    pool = get_recent_yahoo_news_for_tickers(
+        list(US_INDEX_NEWS_TICKERS), limit=INDEX_NEWS_POOL_SIZE, hours=NEWS_LOOKBACK_HOURS
+    )
+    if naver_credentials:
+        pool.update(
+            get_naver_news_for_stocks(
+                *naver_credentials,
+                KR_INDEX_NEWS_QUERIES,
+                limit=INDEX_NEWS_POOL_SIZE,
+                hours=NEWS_LOOKBACK_HOURS,
+                # 지수명만으로 검색하면 본문에 한 번 언급된 연예 기사 등이 섞여,
+                # 제목에 지수명이 들어간 기사만 남긴다.
+                require_query_in_title=True,
+            )
+        )
+    return dedupe_news_across(pool, list(INDICES.keys()), INDEX_NEWS_LIMIT)
+
+
 def main() -> None:
     load_dotenv()
 
@@ -84,13 +110,6 @@ def main() -> None:
         list(US_STOCKS.keys()), hours=NEWS_LOOKBACK_HOURS
     )
 
-    logger.info("주요 지수 뉴스 조회 중 (Yahoo Finance)...")
-    # 지수끼리 같은 시황 기사가 겹치는 일이 잦아, 후보를 넉넉히 받아둔 뒤
-    # 아래에서 중복을 걸러 지수별 INDEX_NEWS_LIMIT개씩 채운다.
-    index_news = get_recent_yahoo_news_for_tickers(
-        list(US_INDEX_NEWS_TICKERS), limit=INDEX_NEWS_POOL_SIZE, hours=NEWS_LOOKBACK_HOURS
-    )
-
     dart_api_key = os.environ.get("DART_API_KEY")
     if dart_api_key:
         logger.info("DART 공시 조회 중...")
@@ -103,31 +122,19 @@ def main() -> None:
 
     naver_client_id = os.environ.get("NAVER_CLIENT_ID")
     naver_client_secret = os.environ.get("NAVER_CLIENT_SECRET")
-    if naver_client_id and naver_client_secret:
+    naver_credentials = (
+        (naver_client_id, naver_client_secret) if naver_client_id and naver_client_secret else None
+    )
+    if naver_credentials:
         logger.info("네이버 뉴스 조회 중...")
-        kr_news = get_naver_news_for_stocks(
-            naver_client_id, naver_client_secret, KR_STOCKS, hours=NEWS_LOOKBACK_HOURS
-        )
-        # 국내 지수 뉴스도 같은 네이버 검색 API로 조회 ({지수 티커: 검색어})
-        index_news.update(
-            get_naver_news_for_stocks(
-                naver_client_id,
-                naver_client_secret,
-                KR_INDEX_NEWS_QUERIES,
-                limit=INDEX_NEWS_POOL_SIZE,
-                hours=NEWS_LOOKBACK_HOURS,
-                # 지수명만으로 검색하면 본문에 한 번 언급된 연예 기사 등이 섞여,
-                # 제목에 지수명이 들어간 기사만 남긴다.
-                require_query_in_title=True,
-            )
-        )
+        kr_news = get_naver_news_for_stocks(*naver_credentials, KR_STOCKS, hours=NEWS_LOOKBACK_HOURS)
     else:
         logger.warning(
-            "NAVER_CLIENT_ID/NAVER_CLIENT_SECRET이 설정되지 않아 국내 뉴스 조회를 건너뜁니다."
+            "NAVER_CLIENT_ID/NAVER_CLIENT_SECRET이 설정되지 않아 국내 뉴스·국내 지수 뉴스 조회를 건너뜁니다."
         )
         kr_news = {}
 
-    index_news = dedupe_news_across(index_news, list(INDICES.keys()), INDEX_NEWS_LIMIT)
+    index_news = _collect_index_news(naver_credentials)
 
     DOCS_DIR.mkdir(exist_ok=True)
     (DOCS_DIR / "index.html").write_text(
@@ -157,7 +164,10 @@ def main() -> None:
 
     new_refresh_token = token_payload.get("refresh_token")
     if new_refresh_token and new_refresh_token != refresh_token:
-        logger.warning("카카오가 새 refresh_token을 발급했습니다.")
+        logger.warning(
+            "카카오가 새 refresh_token을 발급했습니다 "
+            "(워크플로가 KAKAO_REFRESH_TOKEN 시크릿을 자동 갱신)."
+        )
         token_file = os.environ.get("KAKAO_NEW_TOKEN_FILE")
         if token_file:
             Path(token_file).write_text(new_refresh_token, encoding="utf-8")

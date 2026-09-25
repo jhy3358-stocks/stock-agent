@@ -1,13 +1,13 @@
 """국내 종목 뉴스 수집 (네이버 뉴스 검색 API, 무료 인증키 필요)."""
 from __future__ import annotations
 
-import datetime as dt
 import html
 import re
-from email.utils import parsedate_to_datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import requests
+
+from src.news_client import newest_first, parse_rfc822_datetime, recent_cutoff
 
 NAVER_NEWS_URL = "https://openapi.naver.com/v1/search/news.json"
 
@@ -16,15 +16,6 @@ _TAG_RE = re.compile(r"<[^>]+>")
 
 def _clean_text(raw: str) -> str:
     return html.unescape(_TAG_RE.sub("", raw))
-
-
-def _parse_datetime(value: Optional[str]) -> Optional[dt.datetime]:
-    if not value:
-        return None
-    try:
-        return parsedate_to_datetime(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def fetch_naver_news(
@@ -38,7 +29,7 @@ def fetch_naver_news(
     """require_query_in_title=True면 제목에 검색어가 들어간 기사만 남긴다.
     네이버는 본문에 검색어가 한 번만 나와도 결과에 넣어서, 지수명("코스피")
     검색에 연예 기사 등 무관한 기사가 섞이는 것을 막기 위한 옵션이다."""
-    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
+    cutoff = recent_cutoff(hours)
     response = requests.get(
         NAVER_NEWS_URL,
         headers={
@@ -52,7 +43,7 @@ def fetch_naver_news(
 
     news = []
     for item in response.json().get("items", []):
-        pub_date = _parse_datetime(item.get("pubDate"))
+        pub_date = parse_rfc822_datetime(item.get("pubDate"))
         if pub_date is None or pub_date < cutoff:
             continue
         title = _clean_text(item.get("title", ""))
@@ -66,8 +57,7 @@ def fetch_naver_news(
                 "source": "네이버 뉴스",
             }
         )
-    news.sort(key=lambda n: n["date"], reverse=True)
-    return news[:limit]
+    return newest_first(news)[:limit]
 
 
 def get_recent_news_for_stocks(

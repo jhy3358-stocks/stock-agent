@@ -17,7 +17,7 @@ SA_HEADERS = {"User-Agent": "Mozilla/5.0 (stock-agent personal use RSS reader)"}
 
 
 def fetch_yahoo_news(ticker: str, limit: int = 3, hours: int = 24) -> List[dict]:
-    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
+    cutoff = recent_cutoff(hours)
     raw_items = yf.Ticker(ticker).news or []
     news = []
     for raw in raw_items:
@@ -42,7 +42,7 @@ def fetch_yahoo_news(ticker: str, limit: int = 3, hours: int = 24) -> List[dict]
 
 
 def fetch_seekingalpha_news(ticker: str, limit: int = 3, hours: int = 24) -> List[dict]:
-    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
+    cutoff = recent_cutoff(hours)
     response = requests.get(
         SEEKING_ALPHA_RSS_URL.format(ticker=ticker), headers=SA_HEADERS, timeout=15
     )
@@ -51,7 +51,7 @@ def fetch_seekingalpha_news(ticker: str, limit: int = 3, hours: int = 24) -> Lis
     root = ElementTree.fromstring(response.content)
     news = []
     for item in root.findall(".//item"):
-        pub_date = _parse_rfc822_datetime(item.findtext("pubDate"))
+        pub_date = parse_rfc822_datetime(item.findtext("pubDate"))
         if pub_date is None or pub_date < cutoff:
             continue
         news.append(
@@ -80,8 +80,7 @@ def get_recent_news_for_tickers(
     for ticker in tickers:
         yahoo = fetch_yahoo_news(ticker, _SOURCE_POOL_SIZE, hours)
         seeking_alpha = fetch_seekingalpha_news(ticker, _SOURCE_POOL_SIZE, hours)
-        combined = sorted(yahoo + seeking_alpha, key=lambda n: n["date"], reverse=True)
-        result[ticker] = combined[:limit]
+        result[ticker] = newest_first(yahoo + seeking_alpha)[:limit]
     return result
 
 
@@ -93,10 +92,7 @@ def get_recent_yahoo_news_for_tickers(
     Yahoo 피드는 발행 시각 순서가 아니어서(예: 08:17 다음에 08:29 기사) 최신순으로
     다시 정렬한다. 피드 앞쪽에서 limit개만 받으면 더 최신 기사가 빠질 수 있어,
     호출부는 limit을 넉넉히 줘야 한다."""
-    return {
-        ticker: sorted(fetch_yahoo_news(ticker, limit, hours), key=lambda n: n["date"], reverse=True)
-        for ticker in tickers
-    }
+    return {ticker: newest_first(fetch_yahoo_news(ticker, limit, hours)) for ticker in tickers}
 
 
 def dedupe_news_across(news_map: dict, order: List[str], limit: int = 3) -> dict:
@@ -119,6 +115,15 @@ def dedupe_news_across(news_map: dict, order: List[str], limit: int = 3) -> dict
     return result
 
 
+def recent_cutoff(hours: int) -> dt.datetime:
+    """최근 hours시간 기사만 남길 때의 기준 시각(UTC)."""
+    return dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
+
+
+def newest_first(news: List[dict]) -> List[dict]:
+    return sorted(news, key=lambda n: n["date"], reverse=True)
+
+
 def _parse_iso_datetime(value: Optional[str]) -> Optional[dt.datetime]:
     if not value:
         return None
@@ -128,7 +133,7 @@ def _parse_iso_datetime(value: Optional[str]) -> Optional[dt.datetime]:
         return None
 
 
-def _parse_rfc822_datetime(value: Optional[str]) -> Optional[dt.datetime]:
+def parse_rfc822_datetime(value: Optional[str]) -> Optional[dt.datetime]:
     if not value:
         return None
     try:

@@ -7,7 +7,7 @@ src/growth_valuation.py, src/rsi50.py는 순수 계산 함수만 담아 fixture�
 신규상장주는 재무제표 항목 자체가 누락되거나(분기 수 부족) 라벨이 회사마다
 달라 파싱이 실패하기 쉽다. 기존 src/valuation.py와 같은 방식으로, 값을 못
 구하면 예외를 던지지 않고 관대하게 None을 반환한다 - 호출부(src/signal.py)는
-자연히 legacy MA/RSI 신호로 폴백한다.
+다음 폴백(RSI50 평균가)으로 넘어간다.
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ import pandas as pd
 import yfinance as yf
 
 from src.growth_valuation import (
+    FairValueResult,
     GrowthAssumptions,
     classify_stage,
     compute_stage1,
@@ -29,53 +30,30 @@ from src.growth_valuation import (
     select_beta,
     ticker_configured,
 )
+from src.indicators import gap_pct
 from src.models import MarketItem
 from src.rsi50 import Rsi50Result, compute_rsi50
+from src.yf_data import price_history, yahoo_info, yahoo_ticker
 
 _UNIT_M = 1_000_000.0
-
-
-@lru_cache(maxsize=None)
-def _yahoo_info(ticker: str) -> dict:
-    try:
-        return yf.Ticker(ticker).info
-    except Exception:
-        return {}
 
 
 @lru_cache(maxsize=1)
 def _risk_free_rate() -> Optional[float]:
     """미국 10년물 금리 (^TNX / 100)."""
     try:
-        close = yf.Ticker("^TNX").history(period="5d")["Close"]
+        close = price_history("^TNX", period="5d")["Close"]
         return float(close.iloc[-1]) / 100 if len(close) else None
     except Exception:
         return None
 
 
 @lru_cache(maxsize=None)
-def _quarterly_financials(ticker: str) -> Optional[pd.DataFrame]:
+def _statement(ticker: str, attr: str) -> Optional[pd.DataFrame]:
+    """분기 재무제표(quarterly_financials/cashflow/balance_sheet). 없거나 실패 시 None."""
     try:
-        qf = yf.Ticker(ticker).quarterly_financials
-        return qf if qf is not None and not qf.empty else None
-    except Exception:
-        return None
-
-
-@lru_cache(maxsize=None)
-def _quarterly_cashflow(ticker: str) -> Optional[pd.DataFrame]:
-    try:
-        qcf = yf.Ticker(ticker).quarterly_cashflow
-        return qcf if qcf is not None and not qcf.empty else None
-    except Exception:
-        return None
-
-
-@lru_cache(maxsize=None)
-def _quarterly_balance_sheet(ticker: str) -> Optional[pd.DataFrame]:
-    try:
-        bs = yf.Ticker(ticker).quarterly_balance_sheet
-        return bs if bs is not None and not bs.empty else None
+        df = getattr(yf.Ticker(ticker), attr)
+        return df if df is not None and not df.empty else None
     except Exception:
         return None
 
@@ -84,7 +62,7 @@ def _quarterly_balance_sheet(ticker: str) -> Optional[pd.DataFrame]:
 def _full_history_close(ticker: str) -> Optional[pd.Series]:
     """RSI50(§7)이 필요로 하는 상장 이후 전체 종가 (일별 리포트용 6개월치보다 길게)."""
     try:
-        close = yf.Ticker(ticker).history(period="max", interval="1d")["Close"]
+        close = price_history(ticker, period="max", interval="1d")["Close"]
         return close if len(close) else None
     except Exception:
         return None
@@ -130,7 +108,7 @@ class ClassificationInputs:
 
 
 def fetch_classification_inputs(symbol: str) -> Optional[ClassificationInputs]:
-    qf = _quarterly_financials(symbol)
+    qf = _statement(symbol, "quarterly_financials")
     revenue = _row(qf, "Total Revenue")
     ebitda = _row(qf, "EBITDA", "Normalized EBITDA")
     if revenue is None or ebitda is None or len(revenue) < 4:
@@ -149,7 +127,7 @@ def fetch_classification_inputs(symbol: str) -> Optional[ClassificationInputs]:
     if ttm_gross_profit is not None:
         gross_margin = (ttm_gross_profit / _UNIT_M) / ttm_revenue
 
-    info = _yahoo_info(symbol)
+    info = yahoo_info(symbol)
     if gross_margin is None:
         gross_margin = info.get("grossMargins")
     if gross_margin is None:
@@ -194,8 +172,8 @@ class MarketInputs:
 
 
 def fetch_market_inputs(symbol: str) -> Optional[MarketInputs]:
-    info = _yahoo_info(symbol)
-    bs = _quarterly_balance_sheet(symbol)
+    info = yahoo_info(symbol)
+    bs = _statement(symbol, "quarterly_balance_sheet")
 
     shares = _balance_value_m(bs, info, ("Ordinary Shares Number", "Share Issued"), "sharesOutstanding")
     if not shares:
@@ -205,12 +183,12 @@ def fetch_market_inputs(symbol: str) -> Optional[MarketInputs]:
     debt = _balance_value_m(bs, info, ("Total Debt",), "totalDebt") or 0.0
     net_cash = cash - debt
 
-    qcf = _quarterly_cashflow(symbol)
+    qcf = _statement(symbol, "quarterly_cashflow")
     fcf_ttm = _sum_last(_row(qcf, "Free Cash Flow"), 4)
     fcf_ttm = fcf_ttm / _UNIT_M if fcf_ttm is not None else (info.get("freeCashflow") or 0) / _UNIT_M
 
     capex_ttm = _sum_last(_row(qcf, "Capital Expenditure"), 4)
-    revenue_ttm_raw = _sum_last(_row(_quarterly_financials(symbol), "Total Revenue"), 4)
+    revenue_ttm_raw = _sum_last(_row(_statement(symbol, "quarterly_financials"), "Total Revenue"), 4)
     capex_ratio = abs(capex_ttm) / revenue_ttm_raw if capex_ttm is not None and revenue_ttm_raw else 0.0
 
     return MarketInputs(current_shares=shares, net_cash=net_cash, fcf_ttm=fcf_ttm, capex_ratio=capex_ratio)
@@ -232,7 +210,7 @@ def fetch_discount_rate(symbol: str, assumptions: GrowthAssumptions) -> Optional
     rf = _risk_free_rate()
     if rf is None:
         return None
-    live_beta = _yahoo_info(symbol).get("beta")
+    live_beta = yahoo_info(symbol).get("beta")
     try:
         beta = select_beta(live_beta, _listed_over_1y(symbol), assumptions.peer_beta)
     except ValueError:
@@ -250,15 +228,13 @@ class GrowthFairValueSummary:
     fv: float
     gap_pct: float  # (현재가-FV)/FV * 100
     required: dict
-    rsi50: Rsi50Result
 
 
 def item_rsi50(item: MarketItem) -> Rsi50Result:
     """종목의 RSI50 평균가(§7). 상장 이후 전체 종가로 계산해야 Wilder 평활의
     시작점 왜곡이 줄어들어 전체 이력을 쓰고, 조회에 실패하면 리포트용으로 이미
     받아둔 item.close로 대신한다."""
-    ticker = f"{item.symbol}.KS" if item.market == "KR" else item.symbol
-    close = _full_history_close(ticker)
+    close = _full_history_close(yahoo_ticker(item.symbol, item.market))
     if close is None:
         close = item.close
     if close is None or len(close) == 0:
@@ -270,20 +246,26 @@ def growth_fair_value(item: MarketItem) -> Optional[GrowthFairValueSummary]:
     """§1 라우팅에서 GRAV를 못 쓸 때의 대체 모듈 진입점.
 
     config/growth_assumptions.yaml에 종목 가정값이 없으면 이 함수는 아무것도
-    하지 않고 None을 반환한다 (호출부가 legacy MA/RSI 신호로 폴백).
+    하지 않고 None을 반환한다 (호출부가 RSI50 평균가로 폴백).
     """
-    if not ticker_configured(item.symbol):
+    return _growth_fair_value(item.symbol, item.current_price)
+
+
+@lru_cache(maxsize=None)
+def _growth_fair_value(symbol: str, current_price: float) -> Optional[GrowthFairValueSummary]:
+    # 적정주가 줄과 매매 신호, 텍스트·HTML 리포트가 같은 종목으로 여러 번 부르므로 캐시한다.
+    if not ticker_configured(symbol):
         return None
-    assumptions = load_assumptions(item.symbol)
+    assumptions = load_assumptions(symbol)
     if assumptions.P is None:
         return None
 
-    r = fetch_discount_rate(item.symbol, assumptions)
-    market = fetch_market_inputs(item.symbol)
+    r = fetch_discount_rate(symbol, assumptions)
+    market = fetch_market_inputs(symbol)
     if r is None or market is None:
         return None
 
-    classification = fetch_classification_inputs(item.symbol)
+    classification = fetch_classification_inputs(symbol)
     if classification is not None:
         stage = classify_stage(
             classification.ttm_ebitda_margin,
@@ -297,38 +279,24 @@ def growth_fair_value(item: MarketItem) -> Optional[GrowthFairValueSummary]:
         stage = _infer_stage_from_assumptions(assumptions)
         r0_revenue, g0_growth = 0.0, 0.0
 
+    common = dict(
+        assumptions=assumptions,
+        current_price=current_price,
+        current_shares=market.current_shares,
+        r=r,
+        net_cash=market.net_cash,
+        fcf_ttm=market.fcf_ttm,
+    )
     try:
+        result: FairValueResult
         if stage == 1:
             result = compute_stage1(
-                assumptions=assumptions,
-                current_price=item.current_price,
-                current_shares=market.current_shares,
-                r0_revenue=r0_revenue,
-                g0_growth=g0_growth,
-                r=r,
-                net_cash=market.net_cash,
-                fcf_ttm=market.fcf_ttm,
-                capex_ratio=market.capex_ratio,
+                **common, r0_revenue=r0_revenue, g0_growth=g0_growth, capex_ratio=market.capex_ratio
             )
         elif stage == 2:
-            result = compute_stage2(
-                assumptions=assumptions,
-                current_price=item.current_price,
-                current_shares=market.current_shares,
-                r0_revenue=r0_revenue,
-                r=r,
-                net_cash=market.net_cash,
-                fcf_ttm=market.fcf_ttm,
-            )
+            result = compute_stage2(**common, r0_revenue=r0_revenue)
         else:
-            result = compute_stage3(
-                assumptions=assumptions,
-                current_price=item.current_price,
-                current_shares=market.current_shares,
-                r=r,
-                net_cash=market.net_cash,
-                fcf_ttm=market.fcf_ttm,
-            )
+            result = compute_stage3(**common)
     except (TypeError, ZeroDivisionError, AttributeError):
         # segments/tam_T 등 해당 단계에 필요한 가정값이 config에 없는 경우
         return None
@@ -336,10 +304,9 @@ def growth_fair_value(item: MarketItem) -> Optional[GrowthFairValueSummary]:
     if result.fv <= 0:
         return None
 
-    rsi50 = item_rsi50(item)
-
-    gap_pct = (item.current_price - result.fv) / result.fv * 100
-    return GrowthFairValueSummary(stage=stage, fv=result.fv, gap_pct=gap_pct, required=result.required, rsi50=rsi50)
+    return GrowthFairValueSummary(
+        stage=stage, fv=result.fv, gap_pct=gap_pct(current_price, result.fv), required=result.required
+    )
 
 
 def required_condition_text(summary: GrowthFairValueSummary) -> str:

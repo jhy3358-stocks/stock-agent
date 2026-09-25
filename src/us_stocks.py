@@ -1,33 +1,14 @@
 """미국 종목 및 나스닥/S&P500 지수 데이터 수집 (yfinance)."""
 from __future__ import annotations
 
-import yfinance as yf
-
 from config import INDICES, US_STOCKS
 from src.models import MarketItem
+from src.yf_data import price_history
 
 
 def _fetch(ticker: str, name: str, market: str, unit: str) -> MarketItem:
-    history = yf.Ticker(ticker).history(period="6mo", interval="1d")
-    # yfinance가 가장 최근 거래일을 거래량만 채우고 종가는 NaN인 행으로 돌려주는
-    # 경우가 있어(2026-09-25 AAPL 등 미국 종목 전체), 그대로 쓰면 현재가가 NaN이
-    # 되고 괴리율·M-GRAV까지 전부 깨진다. 종가가 없는 행은 버린다.
-    history = history.dropna(subset=["Close"])
-    close = history["Close"]
-    volume = history["Volume"]
-    current_price = float(close.iloc[-1])
-    prev_price = float(close.iloc[-2])
-    change_pct = (current_price - prev_price) / prev_price * 100
-    return MarketItem(
-        name=name,
-        symbol=ticker,
-        market=market,
-        close=close,
-        volume=volume,
-        current_price=current_price,
-        change_pct=change_pct,
-        unit=unit,
-    )
+    history = price_history(ticker, period="6mo", interval="1d")
+    return MarketItem.from_close(name, ticker, market, history["Close"], history["Volume"], unit)
 
 
 def fetch_all_us_stocks() -> list[MarketItem]:

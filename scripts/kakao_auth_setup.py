@@ -16,11 +16,12 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from src.kakao_client import KakaoAuthError, exchange_auth_code  # noqa: E402
+
 KAUTH_AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
-KAUTH_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 TOKEN_FILE = Path(__file__).resolve().parent.parent / ".kakao_token.json"
 
 
@@ -50,21 +51,11 @@ def main() -> None:
     )
     code = input("인가 코드(code): ").strip()
 
-    token_response = requests.post(
-        KAUTH_TOKEN_URL,
-        data={
-            "grant_type": "authorization_code",
-            "client_id": rest_api_key,
-            "redirect_uri": redirect_uri,
-            "code": code,
-        },
-        timeout=10,
-    )
-    if token_response.status_code != 200:
-        print(f"토큰 발급 실패 (status={token_response.status_code}): {token_response.text}")
+    try:
+        payload = exchange_auth_code(rest_api_key, redirect_uri, code)
+    except KakaoAuthError as e:
+        print(e)
         sys.exit(1)
-
-    payload = token_response.json()
     refresh_token = payload["refresh_token"]
 
     TOKEN_FILE.write_text(

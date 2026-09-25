@@ -1,7 +1,10 @@
 """네이버 뉴스 - 지수 뉴스 제목 필터 테스트."""
 from __future__ import annotations
 
+import datetime as dt
+
 import src.naver_news_client as naver
+import src.news_client as news_client
 
 
 class _Resp:
@@ -25,13 +28,13 @@ _ITEMS = [
 
 def _patch(monkeypatch):
     monkeypatch.setattr(naver.requests, "get", lambda *a, **k: _Resp(_ITEMS))
-    monkeypatch.setattr(naver.dt, "datetime", _FixedNow)
+    monkeypatch.setattr(news_client.dt, "datetime", _FixedNow)
 
 
-class _FixedNow(naver.dt.datetime):
+class _FixedNow(dt.datetime):
     @classmethod
     def now(cls, tz=None):
-        return naver.dt.datetime(2026, 9, 25, 18, 0, tzinfo=naver.dt.timezone(naver.dt.timedelta(hours=9)))
+        return dt.datetime(2026, 9, 25, 18, 0, tzinfo=dt.timezone(dt.timedelta(hours=9)))
 
 
 def test_title_filter_drops_articles_without_query_in_title(monkeypatch):

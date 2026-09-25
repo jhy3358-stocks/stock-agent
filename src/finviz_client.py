@@ -15,17 +15,20 @@ _HEADERS = {
 
 # Finviz 종목 스냅샷 페이지는 각 항목이 아래 형태의 고정 마크업으로 렌더링된다:
 # <div class="snapshot-td-label">{label}</div></td><td ...><div class="snapshot-td-content"><b>{value}</b>
+# 값이 양/음 등으로 색칠되는 항목은 <b><span class="color-text ...">{value}</span></b>처럼
+# 한 번 더 감싸져 있어(예: 고PER 종목의 Forward P/E), <b> 안의 태그를 벗겨내고 읽는다.
 _FIELD_PATTERN = (
     r'snapshot-td-label">{label}</div></td>'
-    r'<td[^>]*><div class="snapshot-td-content"><b>([^<]*)</b>'
+    r'<td[^>]*><div class="snapshot-td-content"><b>(.*?)</b>'
 )
+_TAG_RE = re.compile(r"<[^>]+>")
 
 
 def _parse_field(html: str, label: str) -> Optional[float]:
     match = re.search(_FIELD_PATTERN.format(label=re.escape(label)), html)
     if not match:
         return None
-    raw = match.group(1).strip().rstrip("%")
+    raw = _TAG_RE.sub("", match.group(1)).strip().rstrip("%")
     if raw in ("-", ""):
         return None
     try:
