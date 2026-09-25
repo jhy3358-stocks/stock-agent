@@ -73,13 +73,21 @@ KR_INDEX_NEWS_QUERIES = {
 }
 
 # GRAV(Growth Risk-Adjusted Valuation) 모델 입력값.
-# 적정주가 = 평균(Forward EPS) x 평균(Forward P/E) x (1 + g/100) / sqrt(beta)
-#   Forward EPS/Forward P/E는 실행 시마다 Yahoo Finance(yfinance)와 Finviz에서
-#   라이브로 조회해 평균낸다 (src/valuation.py 참고).
+# 적정주가 = EPS x Target P/E x (1 + g/100) / beta
+#   EPS는 가장 최근 발표 분기 EPS x 4로, 미국 종목은 실적 발표 8-K의 분기 희석 EPS,
+#   국내 종목은 DART 정기보고서의 보통주 희석 EPS를 쓴다 (못 구하면 Yahoo 값).
+#   Target P/E는 애널리스트 목표주가 평균 / 추정 EPS로, 국내 종목은 네이버페이 증권
+#   값에 아래 KOREA_DISCOUNT를 적용하고 미국 종목은 Yahoo 값을 쓴다 (조회 실패 시
+#   아래 M_GRAV의 target_pe, 그마저 없으면 라이브 Forward P/E. src/valuation.py 참고).
 # g: 3~5년 이익성장률(%) 컨센서스, beta: 시장 대비 변동성 배수
 # 이 두 값은 라이브로 안정적으로 구하기 어려워(특히 g) Yahoo Finance / Finviz
 # (EPS next 5Y, Beta) / SimplyWall.st 등을 참고해 사람이 채워둔 값이다.
 # 시간이 지나면 정확도가 떨어지므로 주기적으로 갱신해야 한다 (2026-08-28 기준 조사).
+
+# 코리아 디스카운트: 국내 종목 GRAV Target P/E(네이버 목표주가 / 추정 EPS)를 이 비율만큼
+# 깎는다 (0.5 = 50% 할인 -> 멀티플 x 0.5).
+KOREA_DISCOUNT = 0.5
+
 VALUATION = {
     # --- 국내 ---
     "005930": {"growth_rate": 36.5, "beta": 1.548},   # 삼성전자: g=SimplyWall.st 애널리스트 컨센서스, beta=Yahoo Finance
@@ -118,15 +126,13 @@ VALUATION = {
 }
 
 # M-GRAV(해자 반영 GRAV) 모델 입력값.
-#   적정주가 = Forward EPS x Target P/E x (1 + g/100) / beta^(1/m_factor)
-#   Forward EPS는 기존 GRAV와 동일하게 실행 시 Yahoo/Finviz 라이브 평균을 쓰고,
+#   적정주가 = EPS x Target P/E x (1 + g/100) / beta^(1/m_factor)
+#   EPS는 기존 GRAV와 동일한 값(최근 8-K 분기 희석 EPS x 4)을 쓰고,
 #   g(성장률)·beta는 위 VALUATION 값을 그대로 재사용한다.
-#   target_pe: 향후 3~5년 평균으로 봤을 때 "적정"하다고 판단하는 타겟 P/E
-#     멀티플. 라이브 forward PE(현재 시장가 기준)와 달리 업종 특성·이익
-#     듀레이션을 감안해 사람이 채워둔 값이다. None이면 원칙대로 GRAV와 동일한
-#     라이브 forward PE(Yahoo/Finviz 평균)를 그대로 target_pe로 쓴다
-#     (커스텀 타겟 멀티플 추정치가 라이브 값과 크게 어긋나 신뢰하기 어려운
-#     종목에 한해 None 처리 - 2026-09 기준 005930/000660/TSLA).
+#   target_pe: 애널리스트 목표주가 / 추정 EPS(네이버·Yahoo) 조회가 실패했을 때만
+#     쓰는 대체 멀티플. 출처 데이터 없이 업종·해자를 감안해 추정해 넣은 값이라
+#     (2026-09 Claude 추정치) 평소 계산에는 쓰지 않는다. None이면 라이브 forward PE
+#     (Yahoo/Finviz 평균)로 대체한다.
 #   m_score: 0~100점, 아래 4개 항목을 각 25점 배점으로 정성 평가해 합산한다.
 #     1) 기술독점성 & 시장점유율   2) 전환비용 & 생태계 락인(lock-in)
 #     3) 영업이익률(OPM) 체력     4) 원가/자본/특허 등 진입장벽
