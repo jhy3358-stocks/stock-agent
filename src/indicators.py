@@ -1,4 +1,4 @@
-"""이동평균, RSI, 거래량 증감, 괴리율 계산."""
+"""RSI, 거래량 증감, 괴리율 계산."""
 from __future__ import annotations
 
 from typing import Optional
@@ -9,14 +9,6 @@ import pandas as pd
 def gap_pct(price: float, reference: float) -> float:
     """reference(적정주가·이동평균 등) 대비 price의 괴리율(%)."""
     return (price - reference) / reference * 100
-
-
-def moving_average_diff(close: pd.Series, window: int) -> Optional[tuple[float, float]]:
-    """(이동평균값, 현재가 대비 괴리율 %)를 반환한다. 데이터가 부족하면 None."""
-    if len(close) < window:
-        return None
-    ma = close.rolling(window).mean().iloc[-1]
-    return float(ma), float(gap_pct(close.iloc[-1], ma))
 
 
 def rsi(close: pd.Series, period: int = 14) -> Optional[float]:

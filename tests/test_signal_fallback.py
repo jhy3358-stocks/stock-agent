@@ -112,10 +112,25 @@ def test_growth_fv_uses_same_30_70_thresholds(monkeypatch):
 
 
 def test_growth_stage3_not_used_for_signal(monkeypatch):
+    # 3단계 Growth FV는 쓰지 않고 RSI50 평균가(100 -> 괴리율 +10.0%)로 판정
     growth = SimpleNamespace(stage=3, fv=80.0, gap_pct=37.5, required={})
     _set_models(monkeypatch, growth=growth, rsi_value=72.0)
-    monkeypatch.setattr(signal, "_legacy_ma_rsi_signal", lambda item: "legacy")
-    assert signal.trading_signal(_item()) == "legacy"
+    monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(100.0, 5, 98.0, False))
+    assert signal.trading_signal(_item()) == "매도 관점 우세 (RSI 72.0 · RSI50 평균가 괴리율 +10.0%)"
+
+
+def test_rsi50_fair_value_buy_signal(monkeypatch):
+    # 기업가치 모델이 모두 없는 종목: RSI50 평균가 125 대비 -12.0% & RSI 25 -> 매수 관점
+    _set_models(monkeypatch, rsi_value=25.0)
+    monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(125.0, 5, 120.0, False))
+    assert signal.trading_signal(_item()) == "매수 관점 우세 (RSI 25.0 · RSI50 평균가 괴리율 -12.0%)"
+
+
+def test_no_signal_line_when_rsi50_neutral(monkeypatch):
+    # 예전 이평선·RSI 점수제("RSI 58.9"만 표시)는 없어졌다: 조건 미충족이면 아무것도 안 띄움
+    _set_models(monkeypatch, rsi_value=58.9)
+    monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(86.62, 5, 85.0, False))
+    assert signal.trading_signal(_item()) is None
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +161,5 @@ def test_valuation_exception_is_isolated(monkeypatch):
 
     monkeypatch.setattr(signal, "fair_value_inputs", boom)
     monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(float("nan"), 0, float("nan"), True))
-    monkeypatch.setattr(signal, "_legacy_ma_rsi_signal", lambda item: None)
     assert signal.fair_value_line(_item()) == "적정주가 데이터 없음"
     assert signal.trading_signal(_item()) is None
