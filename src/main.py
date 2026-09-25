@@ -116,6 +116,9 @@ def main() -> None:
                 KR_INDEX_NEWS_QUERIES,
                 limit=INDEX_NEWS_POOL_SIZE,
                 hours=NEWS_LOOKBACK_HOURS,
+                # 지수명만으로 검색하면 본문에 한 번 언급된 연예 기사 등이 섞여,
+                # 제목에 지수명이 들어간 기사만 남긴다.
+                require_query_in_title=True,
             )
         )
     else:

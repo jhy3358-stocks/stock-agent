@@ -28,8 +28,16 @@ def _parse_datetime(value: Optional[str]) -> Optional[dt.datetime]:
 
 
 def fetch_naver_news(
-    client_id: str, client_secret: str, query: str, limit: int = 3, hours: int = 24
+    client_id: str,
+    client_secret: str,
+    query: str,
+    limit: int = 3,
+    hours: int = 24,
+    require_query_in_title: bool = False,
 ) -> List[dict]:
+    """require_query_in_title=True면 제목에 검색어가 들어간 기사만 남긴다.
+    네이버는 본문에 검색어가 한 번만 나와도 결과에 넣어서, 지수명("코스피")
+    검색에 연예 기사 등 무관한 기사가 섞이는 것을 막기 위한 옵션이다."""
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)
     response = requests.get(
         NAVER_NEWS_URL,
@@ -47,9 +55,12 @@ def fetch_naver_news(
         pub_date = _parse_datetime(item.get("pubDate"))
         if pub_date is None or pub_date < cutoff:
             continue
+        title = _clean_text(item.get("title", ""))
+        if require_query_in_title and query not in title:
+            continue
         news.append(
             {
-                "title": _clean_text(item.get("title", "")),
+                "title": title,
                 "url": item.get("originallink") or item.get("link"),
                 "date": pub_date,
                 "source": "네이버 뉴스",
@@ -60,10 +71,15 @@ def fetch_naver_news(
 
 
 def get_recent_news_for_stocks(
-    client_id: str, client_secret: str, stock_names: Dict[str, str], limit: int = 3, hours: int = 24
+    client_id: str,
+    client_secret: str,
+    stock_names: Dict[str, str],
+    limit: int = 3,
+    hours: int = 24,
+    require_query_in_title: bool = False,
 ) -> Dict[str, List[dict]]:
     """{종목코드: 종목명} 매핑을 받아 {종목코드: 뉴스목록}을 반환한다."""
     return {
-        code: fetch_naver_news(client_id, client_secret, name, limit, hours)
+        code: fetch_naver_news(client_id, client_secret, name, limit, hours, require_query_in_title)
         for code, name in stock_names.items()
     }
