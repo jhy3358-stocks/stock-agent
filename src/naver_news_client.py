@@ -7,6 +7,7 @@ from typing import Dict, List
 
 import requests
 
+from src.concurrency import fetch_all
 from src.news_client import newest_first, parse_rfc822_datetime, recent_cutoff
 
 NAVER_NEWS_URL = "https://openapi.naver.com/v1/search/news.json"
@@ -69,7 +70,12 @@ def get_recent_news_for_stocks(
     require_query_in_title: bool = False,
 ) -> Dict[str, List[dict]]:
     """{종목코드: 종목명} 매핑을 받아 {종목코드: 뉴스목록}을 반환한다."""
-    return {
-        code: fetch_naver_news(client_id, client_secret, name, limit, hours, require_query_in_title)
-        for code, name in stock_names.items()
-    }
+    return fetch_all(
+        stock_names,
+        lambda code: fetch_naver_news(
+            client_id, client_secret, stock_names[code], limit, hours, require_query_in_title
+        ),
+        what="네이버 뉴스",
+        default=[],
+        max_workers=4,
+    )

@@ -2,16 +2,20 @@
 기반 밸류에이션 표시와 RSI 결합 매수/매도 참고 신호."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
 from config import MA_WINDOWS, RSI_PERIOD
+from src.concurrency import safe_call
 from src.formatting import format_price
 from src.growth_data import growth_fair_value, item_rsi50, required_condition_text
 from src.indicators import gap_pct, moving_average_diff, rsi
 from src.models import MarketItem
 from src.rsi50 import rsi50_fair_value
-from src.valuation import fair_value_inputs, m_grav_fair_value, target_price
+from src.valuation import fair_value_inputs, is_sane, m_grav_fair_value, target_price
+
+logger = logging.getLogger(__name__)
 
 # 매수/매도 관점 판단 기준 (GRAV·M-GRAV·Growth FV 공통)
 #   매수 관점 우세: RSI(14) < RSI_OVERSOLD  이고 적정주가 대비 괴리율 <= -FAIR_VALUE_GAP_THRESHOLD
@@ -41,20 +45,45 @@ def _valuations(item: MarketItem) -> list[_Valuation]:
     (1·2단계)를 쓴다. spec §10에 따라 Growth FV는 "가정 기반 추정"임을 표시하고
     역산 필요조건을 함께 보여준다. RSI50 평균가는 추세 중심 가격이지 기업가치
     추정이 아니라서 여기에 넣지 않는다(적정주가 줄에서만 최후 폴백으로 표시).
+
+    한 종목의 계산 실패가 리포트 전체를 멈추지 않도록 예외는 격리하고(빈 목록),
+    현재가 대비 10배 이상 벗어난 값은 데이터 오염·가정 오류로 보고 버린다.
     """
+    return safe_call(f"{item.symbol} 적정주가 계산", _compute_valuations, item, default=[])
+
+
+# 적정주가 줄·매매 신호를 텍스트/HTML 리포트에서 각각 계산해 같은 종목이 여러 번
+# 검사되므로, 범위 이탈 경고는 (종목, 모델)당 한 번만 남긴다.
+_warned_out_of_band: set[tuple[str, str]] = set()
+
+
+def _sane(item: MarketItem, label: str, value: float) -> bool:
+    if is_sane(value, item.current_price):
+        return True
+    if (item.symbol, label) in _warned_out_of_band:
+        return False
+    _warned_out_of_band.add((item.symbol, label))
+    logger.warning(
+        "%s %s 적정주가 %.2f가 현재가 %.2f 대비 범위를 벗어나 제외",
+        item.symbol, label, value, item.current_price,
+    )
+    return False
+
+
+def _compute_valuations(item: MarketItem) -> list[_Valuation]:
     inputs = fair_value_inputs(item)
     result = []
     for label, value in (
         ("GRAV", target_price(**inputs) if inputs else None),
         ("M-GRAV", m_grav_fair_value(item)),
     ):
-        if value:
+        if value and _sane(item, label, value):
             result.append(_Valuation(label, value, gap_pct(item.current_price, value), label))
     if result:
         return result
 
     growth = growth_fair_value(item)
-    if growth is not None and growth.stage in GROWTH_FV_STAGES:
+    if growth is not None and growth.stage in GROWTH_FV_STAGES and _sane(item, "Growth FV", growth.fv):
         return [
             _Valuation(
                 "Growth FV",
@@ -78,7 +107,7 @@ def fair_value_line(item: MarketItem) -> str:
         for v in _valuations(item)
     ]
     if not parts:
-        rsi50_line = _rsi50_fair_value_line(item)
+        rsi50_line = safe_call(f"{item.symbol} RSI50 평균가 계산", _rsi50_fair_value_line, item, default=None)
         if rsi50_line is not None:
             parts.append(rsi50_line)
 

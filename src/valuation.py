@@ -21,6 +21,7 @@ from functools import lru_cache
 from typing import Optional
 
 from config import M_GRAV, VALUATION
+from src.concurrency import fetch_all
 from src.finviz_client import fetch_forward_metrics
 from src.models import MarketItem
 from src.yf_data import yahoo_info, yahoo_ticker
@@ -92,13 +93,32 @@ def target_price(forward_eps: float, forward_pe: float, growth_rate: float, beta
 
 
 # yfinance 원본 데이터는 ADR 종목(예: SKHY)처럼 통화/단위가 뒤섞여 자릿수
-# 자체가 틀어지는 경우가 확인됐다. M-GRAV 결과가 현재가와 자릿수가 다르게
-# 튀면(10배 이상 차이) 계산이 아니라 데이터 오염으로 보고 버린다.
-_SANITY_BAND = 10
+# 자체가 틀어지는 경우가 확인됐다. 적정주가가 현재가와 자릿수가 다르게
+# 튀면(10배 이상 차이) 계산이 아니라 데이터 오염·가정 오류로 보고 버린다
+# (GRAV·M-GRAV·Growth FV 공통, src/signal.py에서 적용).
+SANITY_BAND = 10
 
 
-def _is_sane(value: float, current_price: float) -> bool:
-    return current_price / _SANITY_BAND <= value <= current_price * _SANITY_BAND
+def is_sane(value: float, current_price: float) -> bool:
+    return current_price / SANITY_BAND <= value <= current_price * SANITY_BAND
+
+
+def prefetch_valuation_inputs(items: list[MarketItem]) -> None:
+    """리포트 렌더링 중 종목마다 순차로 일어나는 Yahoo .info / Finviz 조회를
+    미리 병렬로 채워둔다 (둘 다 lru_cache라 이후 호출은 캐시를 쓴다)."""
+    targets = [item for item in items if item.symbol in VALUATION]
+    fetch_all(
+        [yahoo_ticker(item.symbol, item.market) for item in targets],
+        yahoo_info,
+        what="Yahoo .info",
+        default={},
+    )
+    fetch_all(
+        [item.symbol for item in targets if item.market != "KR"],
+        _finviz_forward_metrics,
+        what="Finviz",
+        default=(None, None),
+    )
 
 
 def m_grav_fair_value(item: MarketItem) -> Optional[float]:
@@ -124,5 +144,4 @@ def m_grav_fair_value(item: MarketItem) -> Optional[float]:
     beta = valuation["beta"]
     g = valuation["growth_rate"]
     m_factor = 1 + m_grav["m_score"] / 100
-    result = forward_eps * target_pe * (1 + g / 100) / (beta ** (1 / m_factor))
-    return result if _is_sane(result, item.current_price) else None
+    return forward_eps * target_pe * (1 + g / 100) / (beta ** (1 / m_factor))

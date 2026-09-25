@@ -12,6 +12,8 @@ from xml.etree import ElementTree
 import requests
 import yfinance as yf
 
+from src.concurrency import fetch_all, safe_call
+
 SEEKING_ALPHA_RSS_URL = "https://seekingalpha.com/api/sa/combined/{ticker}.xml"
 SA_HEADERS = {"User-Agent": "Mozilla/5.0 (stock-agent personal use RSS reader)"}
 
@@ -76,12 +78,15 @@ _SOURCE_POOL_SIZE = 10
 def get_recent_news_for_tickers(
     tickers: List[str], limit: int = 3, hours: int = 24
 ) -> dict:
-    result = {}
-    for ticker in tickers:
-        yahoo = fetch_yahoo_news(ticker, _SOURCE_POOL_SIZE, hours)
-        seeking_alpha = fetch_seekingalpha_news(ticker, _SOURCE_POOL_SIZE, hours)
-        result[ticker] = newest_first(yahoo + seeking_alpha)[:limit]
-    return result
+    def fetch(ticker: str) -> List[dict]:
+        # 한 소스가 실패해도 다른 소스 기사는 살린다.
+        yahoo = safe_call(f"Yahoo 뉴스 {ticker}", fetch_yahoo_news, ticker, _SOURCE_POOL_SIZE, hours, default=[])
+        seeking_alpha = safe_call(
+            f"Seeking Alpha 뉴스 {ticker}", fetch_seekingalpha_news, ticker, _SOURCE_POOL_SIZE, hours, default=[]
+        )
+        return newest_first(yahoo + seeking_alpha)[:limit]
+
+    return fetch_all(tickers, fetch, what="미국 종목 뉴스", default=[])
 
 
 def get_recent_yahoo_news_for_tickers(
@@ -92,7 +97,9 @@ def get_recent_yahoo_news_for_tickers(
     Yahoo 피드는 발행 시각 순서가 아니어서(예: 08:17 다음에 08:29 기사) 최신순으로
     다시 정렬한다. 피드 앞쪽에서 limit개만 받으면 더 최신 기사가 빠질 수 있어,
     호출부는 limit을 넉넉히 줘야 한다."""
-    return {ticker: newest_first(fetch_yahoo_news(ticker, limit, hours)) for ticker in tickers}
+    return fetch_all(
+        tickers, lambda t: newest_first(fetch_yahoo_news(t, limit, hours)), what="Yahoo 뉴스", default=[]
+    )
 
 
 def dedupe_news_across(news_map: dict, order: List[str], limit: int = 3) -> dict:

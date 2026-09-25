@@ -31,6 +31,7 @@ from src.news_client import (
 from src.report import build_kakao_summary, build_report_sections
 from src.sec_client import get_recent_filings_for_tickers
 from src.us_stocks import fetch_all_us_stocks, fetch_indices
+from src.valuation import prefetch_valuation_inputs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -95,6 +96,9 @@ def main() -> None:
     logger.info("미국 종목 및 지수 데이터 수집 중...")
     us_stocks = fetch_all_us_stocks()
     indices = fetch_indices()
+
+    logger.info("적정주가 입력값(Yahoo/Finviz) 조회 중...")
+    prefetch_valuation_inputs(kr_stocks + us_stocks)
 
     for section in build_report_sections(kr_stocks, us_stocks, indices):
         print(section)

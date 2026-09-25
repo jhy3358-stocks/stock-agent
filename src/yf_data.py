@@ -1,10 +1,13 @@
 """yfinance 조회 공용 헬퍼 (적정주가·성장주 모듈과 시세 수집이 함께 쓴다)."""
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 import pandas as pd
 import yfinance as yf
+
+logger = logging.getLogger(__name__)
 
 
 def yahoo_ticker(symbol: str, market: str) -> str:
@@ -17,7 +20,8 @@ def yahoo_info(ticker: str) -> dict:
     """yfinance .info 스냅샷. 실패 시 빈 dict (호출부에서 .get으로 안전하게 처리)."""
     try:
         return yf.Ticker(ticker).info
-    except Exception:
+    except Exception as e:
+        logger.warning("Yahoo .info 조회 실패 %s: %s: %s", ticker, type(e).__name__, e)
         return {}
 
 

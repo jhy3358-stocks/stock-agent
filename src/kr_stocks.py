@@ -6,6 +6,7 @@ import datetime as dt
 from pykrx import stock
 
 from config import HISTORY_DAYS, KR_STOCKS
+from src.concurrency import fetch_all
 from src.models import MarketItem
 
 
@@ -24,4 +25,13 @@ def fetch_kr_stock(code: str, name: str) -> MarketItem:
 
 
 def fetch_all_kr_stocks() -> list[MarketItem]:
-    return [fetch_kr_stock(code, name) for code, name in KR_STOCKS.items()]
+    """조회에 실패한 종목은 경고를 남기고 리포트에서 뺀다. pykrx는 스레드 안전성이
+    보장되지 않아(내부 세션 공유) 병렬화하지 않고 순차 조회한다."""
+    items = fetch_all(
+        KR_STOCKS,
+        lambda code: fetch_kr_stock(code, KR_STOCKS[code]),
+        what="KR 시세",
+        default=None,
+        max_workers=1,
+    )
+    return [item for item in items.values() if item is not None]

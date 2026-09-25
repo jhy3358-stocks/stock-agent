@@ -11,6 +11,7 @@ src/growth_valuation.py, src/rsi50.py는 순수 계산 함수만 담아 fixture�
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional
@@ -35,6 +36,8 @@ from src.models import MarketItem
 from src.rsi50 import Rsi50Result, compute_rsi50
 from src.yf_data import price_history, yahoo_info, yahoo_ticker
 
+logger = logging.getLogger(__name__)
+
 _UNIT_M = 1_000_000.0
 
 
@@ -44,7 +47,8 @@ def _risk_free_rate() -> Optional[float]:
     try:
         close = price_history("^TNX", period="5d")["Close"]
         return float(close.iloc[-1]) / 100 if len(close) else None
-    except Exception:
+    except Exception as e:
+        logger.warning("무위험수익률(^TNX) 조회 실패: %s: %s", type(e).__name__, e)
         return None
 
 
@@ -54,7 +58,8 @@ def _statement(ticker: str, attr: str) -> Optional[pd.DataFrame]:
     try:
         df = getattr(yf.Ticker(ticker), attr)
         return df if df is not None and not df.empty else None
-    except Exception:
+    except Exception as e:
+        logger.warning("%s %s 조회 실패: %s: %s", ticker, attr, type(e).__name__, e)
         return None
 
 
@@ -64,7 +69,8 @@ def _full_history_close(ticker: str) -> Optional[pd.Series]:
     try:
         close = price_history(ticker, period="max", interval="1d")["Close"]
         return close if len(close) else None
-    except Exception:
+    except Exception as e:
+        logger.warning("%s 전체 시세 조회 실패: %s: %s", ticker, type(e).__name__, e)
         return None
 
 

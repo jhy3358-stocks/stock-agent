@@ -1,10 +1,13 @@
 """Finviz 스냅샷 페이지에서 Forward P/E, Forward EPS(EPS next Y)를 스크래핑."""
 from __future__ import annotations
 
+import logging
 import re
 from typing import Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 _HEADERS = {
     "User-Agent": (
@@ -47,7 +50,8 @@ def fetch_forward_metrics(ticker: str) -> dict:
     try:
         resp = requests.get(url, headers=_HEADERS, timeout=10)
         resp.raise_for_status()
-    except requests.RequestException:
+    except requests.RequestException as e:
+        logger.warning("Finviz 조회 실패 %s: %s", ticker, e)
         return {"forward_pe": None, "forward_eps": None}
 
     html = resp.text

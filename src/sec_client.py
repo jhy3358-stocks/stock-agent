@@ -9,9 +9,13 @@ from typing import Dict, List
 
 import requests
 
+from src.concurrency import fetch_all, safe_call
+
 SEC_HEADERS = {"User-Agent": "stock-agent-report (contact: jhy3358@gmail.com)"}
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik10}.json"
+# SEC Fair Access 정책상 초당 10건 이하로 요청해야 해서 동시 요청 수를 낮게 둔다.
+SEC_MAX_WORKERS = 3
 
 # 매우 빈번하게 제출되는 내부자 거래/지분 매각 신고서는 "주요 소식"으로 보기 어려워 제외한다.
 EXCLUDED_FORMS = {"3", "4", "5", "3/A", "4/A", "5/A", "144", "144/A"}
@@ -70,9 +74,11 @@ def fetch_recent_filings(cik10: str, days: int = 7) -> List[dict]:
 
 
 def get_recent_filings_for_tickers(tickers: List[str], days: int = 7) -> Dict[str, List[dict]]:
-    cik_map = fetch_cik_map(tickers)
-    result: Dict[str, List[dict]] = {}
-    for ticker in tickers:
-        cik10 = cik_map.get(ticker)
-        result[ticker] = fetch_recent_filings(cik10, days) if cik10 else []
-    return result
+    cik_map = safe_call("SEC 티커-CIK 매핑 조회", fetch_cik_map, tickers, default={})
+    return fetch_all(
+        tickers,
+        lambda ticker: fetch_recent_filings(cik_map[ticker], days) if ticker in cik_map else [],
+        what="SEC 공시",
+        default=[],
+        max_workers=SEC_MAX_WORKERS,
+    )

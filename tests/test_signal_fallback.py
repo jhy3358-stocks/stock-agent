@@ -116,3 +116,36 @@ def test_growth_stage3_not_used_for_signal(monkeypatch):
     _set_models(monkeypatch, growth=growth, rsi_value=72.0)
     monkeypatch.setattr(signal, "_legacy_ma_rsi_signal", lambda item: "legacy")
     assert signal.trading_signal(_item()) == "legacy"
+
+
+# ---------------------------------------------------------------------------
+# 적정가 범위 검사 (현재가 대비 0.1~10배, GRAV·M-GRAV·Growth FV 공통)
+# ---------------------------------------------------------------------------
+
+def test_out_of_band_grav_dropped_keeps_m_grav(monkeypatch):
+    # 현재가 110: GRAV 1,200(10.9배) 제외, M-GRAV 125 유지
+    _set_models(monkeypatch, grav=1200.0, m_grav=125.0)
+    line = signal.fair_value_line(_item())
+    assert "GRAV)" not in line.replace("M-GRAV)", "")
+    assert "적정주가(M-GRAV) $125.00" in line
+
+
+def test_out_of_band_growth_fv_falls_back_to_rsi50(monkeypatch):
+    # 현재가 110: Growth FV 5(22배 차이) 제외 -> RSI50 평균가로 폴백
+    growth = SimpleNamespace(stage=2, fv=5.0, gap_pct=2100.0, required={})
+    _set_models(monkeypatch, growth=growth)
+    monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(100.0, 5, 98.0, False))
+    line = signal.fair_value_line(_item())
+    assert "Growth FV" not in line
+    assert "RSI50 평균가" in line
+
+
+def test_valuation_exception_is_isolated(monkeypatch):
+    def boom(item):
+        raise KeyError("forwardEps")
+
+    monkeypatch.setattr(signal, "fair_value_inputs", boom)
+    monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(float("nan"), 0, float("nan"), True))
+    monkeypatch.setattr(signal, "_legacy_ma_rsi_signal", lambda item: None)
+    assert signal.fair_value_line(_item()) == "적정주가 데이터 없음"
+    assert signal.trading_signal(_item()) is None
