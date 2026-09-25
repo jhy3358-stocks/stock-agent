@@ -88,8 +88,15 @@ def get_recent_news_for_tickers(
 def get_recent_yahoo_news_for_tickers(
     tickers: List[str], limit: int = 3, hours: int = 24
 ) -> dict:
-    """Yahoo Finance 단일 소스 뉴스 (Seeking Alpha가 다루지 않는 지수 티커용)."""
-    return {ticker: fetch_yahoo_news(ticker, limit, hours) for ticker in tickers}
+    """Yahoo Finance 단일 소스 뉴스 (Seeking Alpha가 다루지 않는 지수 티커용).
+
+    Yahoo 피드는 발행 시각 순서가 아니어서(예: 08:17 다음에 08:29 기사) 최신순으로
+    다시 정렬한다. 피드 앞쪽에서 limit개만 받으면 더 최신 기사가 빠질 수 있어,
+    호출부는 limit을 넉넉히 줘야 한다."""
+    return {
+        ticker: sorted(fetch_yahoo_news(ticker, limit, hours), key=lambda n: n["date"], reverse=True)
+        for ticker in tickers
+    }
 
 
 def dedupe_news_across(news_map: dict, order: List[str], limit: int = 3) -> dict:

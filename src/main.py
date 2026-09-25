@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
 
 # 주요 지수 카드당 뉴스 개수와, 지수 간 중복 제거 전에 받아둘 후보 수
-INDEX_NEWS_LIMIT = 3
+INDEX_NEWS_LIMIT = 2
 INDEX_NEWS_POOL_SIZE = 10
 
 

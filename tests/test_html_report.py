@@ -55,3 +55,17 @@ def test_dedupe_news_across_indices_fills_from_pool():
     assert [x["url"] for x in result["^IXIC"]] == ["e", "f", "g"]  # a, c는 S&P500에 이미 나옴
     assert [x["url"] for x in result["^KS11"]] == ["k1", "k2"]
     assert result["^KQ11"] == []  # 전부 코스피와 중복
+
+
+def test_yahoo_index_news_sorted_newest_first(monkeypatch):
+    import src.news_client as news_client
+
+    feed = [
+        {"title": "a", "url": "a", "date": dt.datetime(2026, 9, 25, 8, 17), "source": "Yahoo Finance"},
+        {"title": "b", "url": "b", "date": dt.datetime(2026, 9, 25, 8, 29), "source": "Yahoo Finance"},
+        {"title": "c", "url": "c", "date": dt.datetime(2026, 9, 25, 6, 45), "source": "Yahoo Finance"},
+    ]
+    monkeypatch.setattr(news_client, "fetch_yahoo_news", lambda ticker, limit, hours: feed)
+
+    result = news_client.get_recent_yahoo_news_for_tickers(["^GSPC"], limit=10)
+    assert [n["url"] for n in result["^GSPC"]] == ["b", "a", "c"]
