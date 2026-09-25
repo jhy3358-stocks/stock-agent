@@ -9,6 +9,10 @@ from src.models import MarketItem
 
 def _fetch(ticker: str, name: str, market: str, unit: str) -> MarketItem:
     history = yf.Ticker(ticker).history(period="6mo", interval="1d")
+    # yfinance가 가장 최근 거래일을 거래량만 채우고 종가는 NaN인 행으로 돌려주는
+    # 경우가 있어(2026-09-25 AAPL 등 미국 종목 전체), 그대로 쓰면 현재가가 NaN이
+    # 되고 괴리율·M-GRAV까지 전부 깨진다. 종가가 없는 행은 버린다.
+    history = history.dropna(subset=["Close"])
     close = history["Close"]
     volume = history["Volume"]
     current_price = float(close.iloc[-1])
