@@ -85,6 +85,13 @@ def get_recent_news_for_tickers(
     return result
 
 
+def get_recent_yahoo_news_for_tickers(
+    tickers: List[str], limit: int = 3, hours: int = 24
+) -> dict:
+    """Yahoo Finance 단일 소스 뉴스 (Seeking Alpha가 다루지 않는 지수 티커용)."""
+    return {ticker: fetch_yahoo_news(ticker, limit, hours) for ticker in tickers}
+
+
 def _parse_iso_datetime(value: Optional[str]) -> Optional[dt.datetime]:
     if not value:
         return None

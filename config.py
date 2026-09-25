@@ -61,6 +61,17 @@ DISCLOSURE_LOOKBACK_DAYS = 2
 # 관련 뉴스가 통째로 비어버릴 수 있어 24시간 롤링 윈도를 사용).
 NEWS_LOOKBACK_HOURS = 24
 
+# 주요 지수 카드에 붙일 뉴스 검색 키.
+#   - 미국 지수: Yahoo Finance 지수 티커 뉴스 (Seeking Alpha RSS는 지수 티커를
+#     지원하지 않아 0건이고, ETF(SPY/QQQ) 피드는 ETF 상품 기사 위주라 쓰지 않는다)
+#   - 국내 지수: 네이버 뉴스 검색어. "코스피"/"코스닥" 단독 검색은 두 지수 결과가
+#     같은 시황 기사로 거의 겹쳐서 "지수"를 붙여 구분한다.
+US_INDEX_NEWS_TICKERS = ("^GSPC", "^IXIC")
+KR_INDEX_NEWS_QUERIES = {
+    "^KS11": "코스피 지수",
+    "^KQ11": "코스닥 지수",
+}
+
 # GRAV(Growth Risk-Adjusted Valuation) 모델 입력값.
 # 적정주가 = 평균(Forward EPS) x 평균(Forward P/E) x (1 + g/100) / sqrt(beta)
 #   Forward EPS/Forward P/E는 실행 시마다 Yahoo Finance(yfinance)와 Finviz에서

@@ -10,8 +10,10 @@ from dotenv import load_dotenv
 from config import (
     DISCLOSURE_LOOKBACK_DAYS,
     KR_DART_CORP_CODES,
+    KR_INDEX_NEWS_QUERIES,
     KR_STOCKS,
     NEWS_LOOKBACK_HOURS,
+    US_INDEX_NEWS_TICKERS,
     US_STOCKS,
 )
 from src.dart_client import get_recent_disclosures_for_stocks
@@ -19,7 +21,7 @@ from src.html_report import build_html_report
 from src.kakao_client import send_summary
 from src.kr_stocks import fetch_all_kr_stocks
 from src.naver_news_client import get_recent_news_for_stocks as get_naver_news_for_stocks
-from src.news_client import get_recent_news_for_tickers
+from src.news_client import get_recent_news_for_tickers, get_recent_yahoo_news_for_tickers
 from src.report import build_kakao_summary, build_report_sections
 from src.sec_client import get_recent_filings_for_tickers
 from src.us_stocks import fetch_all_us_stocks, fetch_indices
@@ -73,6 +75,11 @@ def main() -> None:
         list(US_STOCKS.keys()), hours=NEWS_LOOKBACK_HOURS
     )
 
+    logger.info("주요 지수 뉴스 조회 중 (Yahoo Finance)...")
+    index_news = get_recent_yahoo_news_for_tickers(
+        list(US_INDEX_NEWS_TICKERS), hours=NEWS_LOOKBACK_HOURS
+    )
+
     dart_api_key = os.environ.get("DART_API_KEY")
     if dart_api_key:
         logger.info("DART 공시 조회 중...")
@@ -90,6 +97,15 @@ def main() -> None:
         kr_news = get_naver_news_for_stocks(
             naver_client_id, naver_client_secret, KR_STOCKS, hours=NEWS_LOOKBACK_HOURS
         )
+        # 국내 지수 뉴스도 같은 네이버 검색 API로 조회 ({지수 티커: 검색어})
+        index_news.update(
+            get_naver_news_for_stocks(
+                naver_client_id,
+                naver_client_secret,
+                KR_INDEX_NEWS_QUERIES,
+                hours=NEWS_LOOKBACK_HOURS,
+            )
+        )
     else:
         logger.warning(
             "NAVER_CLIENT_ID/NAVER_CLIENT_SECRET이 설정되지 않아 국내 뉴스 조회를 건너뜁니다."
@@ -99,7 +115,8 @@ def main() -> None:
     DOCS_DIR.mkdir(exist_ok=True)
     (DOCS_DIR / "index.html").write_text(
         build_html_report(
-            kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news, kr_news
+            kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news, kr_news,
+            index_news,
         ),
         encoding="utf-8",
     )
