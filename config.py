@@ -65,11 +65,12 @@ NEWS_LOOKBACK_HOURS = 24
 #   - 미국 지수: Yahoo Finance 지수 티커 뉴스 (Seeking Alpha RSS는 지수 티커를
 #     지원하지 않아 0건이고, ETF(SPY/QQQ) 피드는 ETF 상품 기사 위주라 쓰지 않는다)
 #   - 국내 지수: 네이버 뉴스 검색어. "코스피"/"코스닥" 단독 검색은 두 지수 결과가
-#     같은 시황 기사로 거의 겹쳐서 "지수"를 붙여 구분한다.
+#     같은 시황 기사로 거의 겹치고, "지수"를 붙이면 코스닥 쪽에 개별 종목 기사가
+#     섞여서 "시황"을 붙인다.
 US_INDEX_NEWS_TICKERS = ("^GSPC", "^IXIC")
 KR_INDEX_NEWS_QUERIES = {
-    "^KS11": "코스피 지수",
-    "^KQ11": "코스닥 지수",
+    "^KS11": "코스피 시황",
+    "^KQ11": "코스닥 시황",
 }
 
 # GRAV(Growth Risk-Adjusted Valuation) 모델 입력값.
