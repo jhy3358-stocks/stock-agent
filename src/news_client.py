@@ -92,6 +92,26 @@ def get_recent_yahoo_news_for_tickers(
     return {ticker: fetch_yahoo_news(ticker, limit, hours) for ticker in tickers}
 
 
+def dedupe_news_across(news_map: dict, order: List[str], limit: int = 3) -> dict:
+    """여러 카드(지수)에 같은 기사가 반복되지 않게, order 순서대로 앞 카드에
+    이미 나온 기사(URL 기준)를 뒤 카드 후보에서 빼고 limit개씩 채운다.
+    news_map의 각 목록은 limit보다 넉넉한 후보 풀이어야 빈자리가 채워진다."""
+    seen = set()
+    result = {}
+    for key in order:
+        picked = []
+        for news in news_map.get(key, []):
+            url = news.get("url")
+            if url in seen:
+                continue
+            picked.append(news)
+            if len(picked) >= limit:
+                break
+        seen.update(n.get("url") for n in picked)
+        result[key] = picked
+    return result
+
+
 def _parse_iso_datetime(value: Optional[str]) -> Optional[dt.datetime]:
     if not value:
         return None

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from config import (
     DISCLOSURE_LOOKBACK_DAYS,
+    INDICES,
     KR_DART_CORP_CODES,
     KR_INDEX_NEWS_QUERIES,
     KR_STOCKS,
@@ -21,7 +22,11 @@ from src.html_report import build_html_report
 from src.kakao_client import send_summary
 from src.kr_stocks import fetch_all_kr_stocks
 from src.naver_news_client import get_recent_news_for_stocks as get_naver_news_for_stocks
-from src.news_client import get_recent_news_for_tickers, get_recent_yahoo_news_for_tickers
+from src.news_client import (
+    dedupe_news_across,
+    get_recent_news_for_tickers,
+    get_recent_yahoo_news_for_tickers,
+)
 from src.report import build_kakao_summary, build_report_sections
 from src.sec_client import get_recent_filings_for_tickers
 from src.us_stocks import fetch_all_us_stocks, fetch_indices
@@ -30,6 +35,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
+
+# 주요 지수 카드당 뉴스 개수와, 지수 간 중복 제거 전에 받아둘 후보 수
+INDEX_NEWS_LIMIT = 3
+INDEX_NEWS_POOL_SIZE = 10
 
 
 def _resolve_report_page_url() -> str:
@@ -76,8 +85,10 @@ def main() -> None:
     )
 
     logger.info("주요 지수 뉴스 조회 중 (Yahoo Finance)...")
+    # 지수끼리 같은 시황 기사가 겹치는 일이 잦아, 후보를 넉넉히 받아둔 뒤
+    # 아래에서 중복을 걸러 지수별 INDEX_NEWS_LIMIT개씩 채운다.
     index_news = get_recent_yahoo_news_for_tickers(
-        list(US_INDEX_NEWS_TICKERS), hours=NEWS_LOOKBACK_HOURS
+        list(US_INDEX_NEWS_TICKERS), limit=INDEX_NEWS_POOL_SIZE, hours=NEWS_LOOKBACK_HOURS
     )
 
     dart_api_key = os.environ.get("DART_API_KEY")
@@ -103,6 +114,7 @@ def main() -> None:
                 naver_client_id,
                 naver_client_secret,
                 KR_INDEX_NEWS_QUERIES,
+                limit=INDEX_NEWS_POOL_SIZE,
                 hours=NEWS_LOOKBACK_HOURS,
             )
         )
@@ -111,6 +123,8 @@ def main() -> None:
             "NAVER_CLIENT_ID/NAVER_CLIENT_SECRET이 설정되지 않아 국내 뉴스 조회를 건너뜁니다."
         )
         kr_news = {}
+
+    index_news = dedupe_news_across(index_news, list(INDICES.keys()), INDEX_NEWS_LIMIT)
 
     DOCS_DIR.mkdir(exist_ok=True)
     (DOCS_DIR / "index.html").write_text(

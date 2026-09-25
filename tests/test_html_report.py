@@ -35,3 +35,23 @@ def test_index_cards_without_news_render():
     page = build_html_report([], [], [_index("^IXIC", "나스닥")])
     assert "나스닥" in page
     assert "관련 뉴스" not in page
+
+
+def test_dedupe_news_across_indices_fills_from_pool():
+    from src.news_client import dedupe_news_across
+
+    def n(u):
+        return {"title": u, "url": u, "date": dt.datetime(2026, 9, 25), "source": "x"}
+
+    pool = {
+        "^GSPC": [n("a"), n("b"), n("c"), n("d")],
+        "^IXIC": [n("a"), n("e"), n("c"), n("f"), n("g")],
+        "^KS11": [n("k1"), n("k2")],
+        "^KQ11": [n("k1"), n("k2")],
+    }
+    result = dedupe_news_across(pool, ["^GSPC", "^IXIC", "^KS11", "^KQ11"], limit=3)
+
+    assert [x["url"] for x in result["^GSPC"]] == ["a", "b", "c"]
+    assert [x["url"] for x in result["^IXIC"]] == ["e", "f", "g"]  # a, c는 S&P500에 이미 나옴
+    assert [x["url"] for x in result["^KS11"]] == ["k1", "k2"]
+    assert result["^KQ11"] == []  # 전부 코스피와 중복
