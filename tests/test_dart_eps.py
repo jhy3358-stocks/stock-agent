@@ -30,3 +30,21 @@ def test_fourth_quarter_is_annual_minus_q3_cumulative(monkeypatch):
         (2025, "11014"): _eps_rows("1,500", "4,200"),
     }))
     assert dart.fetch_latest_quarter_eps("k", "c", dt.date(2026, 3, 20)) == (1800.0, "2025년 4분기")
+
+
+def test_request_error_does_not_leak_api_key(monkeypatch):
+    import pytest
+    import requests
+
+    calls = []
+
+    def timeout(url, params, timeout):
+        calls.append(url)
+        raise requests.ConnectTimeout(f"{url}?crtfc_key={params['crtfc_key']}")
+
+    monkeypatch.setattr(dart.requests, "get", timeout)
+    with pytest.raises(RuntimeError) as err:
+        dart._fetch_financials("SECRET-KEY", "c", 2026, "11012")
+    assert "SECRET-KEY" not in str(err.value)
+    assert "ConnectTimeout" in str(err.value)
+    assert len(calls) == dart.REQUEST_ATTEMPTS

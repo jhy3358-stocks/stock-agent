@@ -14,25 +14,41 @@ LIST_URL = "https://opendart.fss.or.kr/api/list.json"
 EXCLUDED_KEYWORDS = ("임원ㆍ주요주주특정증권등소유상황보고서",)
 
 
+# 해외(GitHub Actions) 러너에서 DART 접속이 가끔 시간 초과되어(2026-09-25 확인) 한 번 더 시도한다.
+REQUEST_ATTEMPTS = 2
+
+
+def _get(url: str, params: dict, what: str) -> requests.Response:
+    """DART GET 요청. 실패 시 인증키(crtfc_key)가 담긴 요청 URL이 예외 메시지로
+    로그(GitHub Actions 포함)에 노출되지 않도록, 예외 종류와 상태 코드만 남긴다."""
+    error = ""
+    for _ in range(REQUEST_ATTEMPTS):
+        try:
+            response = requests.get(url, params=params, timeout=15)
+        except requests.RequestException as e:
+            error = type(e).__name__
+            continue
+        if response.status_code == 200:
+            return response
+        error = f"HTTP {response.status_code}"
+    raise RuntimeError(f"{what} 실패: {error}")
+
+
 def fetch_recent_disclosures(api_key: str, corp_code: str, days: int = 7) -> List[dict]:
     """최근 N일 이내의 주요 공시 목록을 반환한다."""
     end_date = dt.date.today()
     begin_date = end_date - dt.timedelta(days=days)
-    response = requests.get(
+    response = _get(
         LIST_URL,
-        params={
+        {
             "crtfc_key": api_key,
             "corp_code": corp_code,
             "bgn_de": begin_date.strftime("%Y%m%d"),
             "end_de": end_date.strftime("%Y%m%d"),
             "page_count": 30,
         },
-        timeout=15,
+        "DART 공시 조회",
     )
-    # raise_for_status()의 오류 메시지에는 인증키(crtfc_key)가 담긴 요청 URL이
-    # 그대로 들어가 로그(GitHub Actions)에 노출되므로 상태 코드만 남긴다.
-    if response.status_code != 200:
-        raise RuntimeError(f"DART 공시 조회 실패: HTTP {response.status_code}")
     data = response.json()
 
     # status "013"은 "조회된 데이터가 없습니다" (정상적인 무공시 상태)
@@ -84,20 +100,17 @@ _EPS_ACCOUNT_IDS = ("ifrs-full_DilutedEarningsLossPerShare", "ifrs-full_BasicEar
 
 def _fetch_financials(api_key: str, corp_code: str, year: int, report_code: str) -> List[dict]:
     """연결재무제표 전체 계정. 해당 보고서가 아직 없으면 빈 목록."""
-    response = requests.get(
+    response = _get(
         FINANCIALS_URL,
-        params={
+        {
             "crtfc_key": api_key,
             "corp_code": corp_code,
             "bsns_year": str(year),
             "reprt_code": report_code,
             "fs_div": "CFS",
         },
-        timeout=15,
+        "DART 재무제표 조회",
     )
-    # 오류 메시지에 인증키가 담긴 URL이 노출되지 않도록 상태 코드만 남긴다 (위와 동일).
-    if response.status_code != 200:
-        raise RuntimeError(f"DART 재무제표 조회 실패: HTTP {response.status_code}")
     data = response.json()
     if data.get("status") == "013":  # 조회된 데이터 없음 (아직 제출 전)
         return []
