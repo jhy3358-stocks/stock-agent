@@ -5,6 +5,7 @@ SEC는 요청 시 연락 가능한 User-Agent를 요구한다 (Fair Access 정�
 from __future__ import annotations
 
 import datetime as dt
+from functools import lru_cache
 from typing import Dict, List
 
 import requests
@@ -34,26 +35,33 @@ def _describe_form(form: str) -> str:
     return FORM_LABELS.get(form, form)
 
 
-def fetch_cik_map(tickers: List[str]) -> Dict[str, str]:
-    """티커 -> 10자리 zero-padded CIK 매핑을 만든다."""
+@lru_cache(maxsize=1)
+def all_ciks() -> Dict[str, str]:
+    """SEC 전체 티커 -> 10자리 zero-padded CIK (공시 조회·EPS 조회가 함께 쓴다)."""
     response = requests.get(TICKERS_URL, headers=SEC_HEADERS, timeout=15)
     response.raise_for_status()
-    wanted = set(tickers)
-    result: Dict[str, str] = {}
-    for entry in response.json().values():
-        ticker = entry["ticker"]
-        if ticker in wanted:
-            result[ticker] = str(entry["cik_str"]).zfill(10)
-    return result
+    return {entry["ticker"]: str(entry["cik_str"]).zfill(10) for entry in response.json().values()}
 
 
-def fetch_recent_filings(cik10: str, days: int = 7) -> List[dict]:
-    """최근 N일 이내의 주요 공시 목록을 반환한다."""
+def fetch_cik_map(tickers: List[str]) -> Dict[str, str]:
+    """티커 -> 10자리 zero-padded CIK 매핑을 만든다."""
+    ciks = all_ciks()
+    return {ticker: ciks[ticker] for ticker in tickers if ticker in ciks}
+
+
+@lru_cache(maxsize=None)
+def fetch_submissions(cik10: str) -> dict:
+    """회사별 최근 제출 목록(filings.recent) 원본."""
     response = requests.get(
         SUBMISSIONS_URL.format(cik10=cik10), headers=SEC_HEADERS, timeout=15
     )
     response.raise_for_status()
-    recent = response.json()["filings"]["recent"]
+    return response.json()["filings"]["recent"]
+
+
+def fetch_recent_filings(cik10: str, days: int = 7) -> List[dict]:
+    """최근 N일 이내의 주요 공시 목록을 반환한다."""
+    recent = fetch_submissions(cik10)
     cutoff = dt.date.today() - dt.timedelta(days=days)
 
     filings = []

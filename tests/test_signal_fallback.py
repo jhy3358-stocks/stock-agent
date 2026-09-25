@@ -68,7 +68,7 @@ def test_no_data_message_when_rsi50_also_fails(monkeypatch):
 def _set_models(monkeypatch, grav=None, m_grav=None, growth=None, rsi_value=50.0):
     monkeypatch.setattr(
         signal, "fair_value_inputs",
-        lambda item: None if grav is None else {"forward_eps": grav, "forward_pe": 1.0, "growth_rate": 0.0, "beta": 1.0},
+        lambda item: None if grav is None else {"eps": grav, "target_pe": 1.0, "growth_rate": 0.0, "beta": 1.0},
     )
     monkeypatch.setattr(signal, "m_grav_fair_value", lambda item: m_grav)
     monkeypatch.setattr(signal, "growth_fair_value", lambda item: growth)
