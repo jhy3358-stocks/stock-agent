@@ -5,13 +5,18 @@ from __future__ import annotations
 from typing import Optional
 
 from config import MA_WINDOWS, RSI_PERIOD
-from src.growth_data import growth_fair_value, required_condition_text
+from src.growth_data import growth_fair_value, item_rsi50, required_condition_text
 from src.indicators import moving_average_diff, rsi
 from src.models import MarketItem
+from src.rsi50 import rsi50_fair_value
 from src.valuation import fair_value_inputs, m_grav_fair_value, target_price
 
 # 과매수/과매도 판단에 쓰는 (기존 GRAV 모델) 적정주가 대비 괴리율 임계값(%)
 FAIR_VALUE_GAP_THRESHOLD = 30.0
+
+# 적정주가 표시에 쓰는 Growth FV 단계. 3단계(매출 미미, TAM·성공확률 가정에
+# 거의 전적으로 의존)는 가정 민감도가 너무 커서 RSI50 평균가로 대신한다.
+GROWTH_FV_STAGES = (1, 2)
 
 
 def _format_price(value: float, unit: str) -> str:
@@ -28,8 +33,9 @@ def fair_value_line(item: MarketItem) -> str:
     기존 GRAV 모델과 M-GRAV(해자 반영) 모델 값을 "적정주가(라벨) ..
     (괴리율 ..%)" 형태로 나란히 보여준다. 괴리율 = (현재가-적정주가)/적정주가.
     둘 다 못 구하는 종목(SPCX 등 forward EPS 커버리지가 없는 성장주)은
-    docs/growth_valuation_spec.md의 Growth FV 모듈로 대체하고, spec §10에
+    docs/growth_valuation_spec.md의 Growth FV 모듈(1·2단계)로 대체하고, spec §10에
     따라 "가정 기반 추정"임을 함께 표시하며 역산 필요조건을 괴리율과 나란히 보여준다.
+    그마저 안 되면 RSI50 평균가(추세 중심 가격)를 적정주가로 표시한다.
     """
     inputs = fair_value_inputs(item)
     original = target_price(**inputs) if inputs else None
@@ -44,15 +50,41 @@ def fair_value_line(item: MarketItem) -> str:
 
     if not parts:
         growth = growth_fair_value(item)
-        if growth is not None:
+        if growth is not None and growth.stage in GROWTH_FV_STAGES:
             parts.append(
                 f"적정주가(Growth FV, 가정 기반 추정) {_format_price(growth.fv, item.unit)} "
                 f"(괴리율 {growth.gap_pct:+.1f}%) · {required_condition_text(growth)}"
             )
 
     if not parts:
+        rsi50_line = _rsi50_fair_value_line(item)
+        if rsi50_line is not None:
+            parts.append(rsi50_line)
+
+    if not parts:
         return "적정주가 데이터 없음"
     return ", ".join(parts)
+
+
+def _rsi50_fair_value_line(item: MarketItem) -> Optional[str]:
+    """GRAV/M-GRAV/Growth FV(1·2단계) 모두 못 구할 때의 최후 폴백.
+
+    기업가치가 아니라 최근 126거래일 추세의 중심 가격(RSI(14)가 50을 지나간
+    가격들의 평균)이라, 라벨에 "추세 기준"임을 밝혀 다른 모델과 구분한다.
+    """
+    result = item_rsi50(item)
+    fair = rsi50_fair_value(result)
+    if fair is None:
+        return None
+    value, method = fair
+    gap = (item.current_price - value) / value * 100
+    notes = [method]
+    if result.data_insufficient:
+        notes.append("이력 짧음")
+    return (
+        f"적정주가(RSI50 평균가, 추세 기준·{'/'.join(notes)}) "
+        f"{_format_price(value, item.unit)} (괴리율 {gap:+.1f}%)"
+    )
 
 
 def _fair_value_gap_pct(item: MarketItem) -> Optional[float]:
@@ -97,7 +129,7 @@ def _growth_fv_signal(item: MarketItem) -> Optional[str]:
     참고 신호로만 노출한다.
     """
     growth = growth_fair_value(item)
-    if growth is None:
+    if growth is None or growth.stage not in GROWTH_FV_STAGES:
         return None
 
     rsi_value = rsi(item.close, RSI_PERIOD)

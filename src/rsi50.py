@@ -5,6 +5,11 @@
 평균가(방법 A)와, 역산으로 구한 "다음날 RSI가 정확히 50이 되는 종가"의
 평균(방법 B)을 구한다. 성장주 리포트 전용이라 growth_valuation과 마찬가지로
 독립 모듈로 둔다.
+
+Wilder 평활(EMA)은 첫 값부터 시작해 초기 며칠은 avg_gain/avg_loss가 안정되지
+않아, 상장 직후 구간의 P50이 음수(예: SPCX 상장 2일차 -217)로 튀는 것이
+확인됐다. 그래서 첫 WARMUP 거래일은 평균 구간에서 제외한다(이력이 126+WARMUP일
+이상이면 기존 구간과 동일해 결과가 바뀌지 않는다).
 """
 from __future__ import annotations
 
@@ -17,6 +22,8 @@ import pandas as pd
 RSI_PERIOD = 14
 WINDOW = 126
 MIN_WARMUP = 100
+# 평균 구간에서 제외하는 상장 초기 거래일 수 (RSI 기간의 2배)
+WARMUP = RSI_PERIOD * 2
 
 
 @dataclass
@@ -43,9 +50,12 @@ def compute_rsi50(close: pd.Series) -> Rsi50Result:
     close = close.dropna()
     data_insufficient = len(close) < WINDOW + MIN_WARMUP
 
+    if len(close) <= WARMUP:
+        return Rsi50Result(float("nan"), 0, float("nan"), True)
+
     rsi, p50 = wilder_rsi_and_p50(close)
 
-    window = rsi.index[-min(WINDOW, len(close)):]
+    window = rsi.index[max(len(close) - WINDOW, WARMUP):]
     rsi_prev = rsi.shift(1)
     close_prev = close.shift(1)
 
@@ -69,3 +79,17 @@ def compute_rsi50(close: pd.Series) -> Rsi50Result:
         avg_p50=avg_p50,
         data_insufficient=data_insufficient,
     )
+
+
+def rsi50_fair_value(result: Rsi50Result) -> Optional[tuple[float, str]]:
+    """RSI50 평균가를 적정주가로 쓸 때의 (값, 방식 라벨).
+
+    RSI가 실제로 50을 지나간 가격들의 평균(방법 A)을 우선 쓰고, 구간 내내
+    한쪽으로만 추세가 이어져 교차점이 없으면 역산 P50 평균(방법 B)을 쓴다.
+    둘 다 없거나 0 이하면 None.
+    """
+    if result.avg_cross == result.avg_cross and result.avg_cross > 0:
+        return result.avg_cross, "교차점 평균"
+    if result.avg_p50 == result.avg_p50 and result.avg_p50 > 0:
+        return result.avg_p50, "P50 역산 평균"
+    return None

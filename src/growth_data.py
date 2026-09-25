@@ -253,6 +253,19 @@ class GrowthFairValueSummary:
     rsi50: Rsi50Result
 
 
+def item_rsi50(item: MarketItem) -> Rsi50Result:
+    """종목의 RSI50 평균가(§7). 상장 이후 전체 종가로 계산해야 Wilder 평활의
+    시작점 왜곡이 줄어들어 전체 이력을 쓰고, 조회에 실패하면 리포트용으로 이미
+    받아둔 item.close로 대신한다."""
+    ticker = f"{item.symbol}.KS" if item.market == "KR" else item.symbol
+    close = _full_history_close(ticker)
+    if close is None:
+        close = item.close
+    if close is None or len(close) == 0:
+        return Rsi50Result(float("nan"), 0, float("nan"), True)
+    return compute_rsi50(close)
+
+
 def growth_fair_value(item: MarketItem) -> Optional[GrowthFairValueSummary]:
     """§1 라우팅에서 GRAV를 못 쓸 때의 대체 모듈 진입점.
 
@@ -323,8 +336,7 @@ def growth_fair_value(item: MarketItem) -> Optional[GrowthFairValueSummary]:
     if result.fv <= 0:
         return None
 
-    close = _full_history_close(item.symbol)
-    rsi50 = compute_rsi50(close) if close is not None else Rsi50Result(float("nan"), 0, float("nan"), True)
+    rsi50 = item_rsi50(item)
 
     gap_pct = (item.current_price - result.fv) / result.fv * 100
     return GrowthFairValueSummary(stage=stage, fv=result.fv, gap_pct=gap_pct, required=result.required, rsi50=rsi50)
