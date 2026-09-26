@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from functools import lru_cache
 
 import pandas as pd
@@ -32,5 +33,21 @@ def price_history(ticker: str, **kwargs) -> pd.DataFrame:
     경우가 있어(2026-09-25 AAPL 등 미국 종목 전체), 그대로 쓰면 현재가가 NaN이
     되고 괴리율·적정주가까지 전부 깨진다.
     """
-    history = yf.Ticker(ticker).history(**kwargs)
+    history = _with_cache_lock_retry(lambda: yf.Ticker(ticker).history(**kwargs))
     return history.dropna(subset=["Close"])
+
+
+# yfinance는 시간대 등 내부 캐시를 로컬 sqlite 파일에 두는데, 여러 종목을 병렬로 조회하면
+# 이 파일이 잠겨 "database is locked"로 종목 하나가 통째로 빠질 수 있다(2026-09-26 AVGO).
+# 잠금은 잠깐이라 조금 기다렸다 다시 시도한다.
+CACHE_LOCK_RETRIES = 3
+
+
+def _with_cache_lock_retry(fn):
+    for attempt in range(CACHE_LOCK_RETRIES):
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001 - sqlite3.OperationalError 등 잠금 오류만 재시도
+            if "database is locked" not in str(e) or attempt == CACHE_LOCK_RETRIES - 1:
+                raise
+            time.sleep(0.5 * (attempt + 1))

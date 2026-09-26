@@ -4,7 +4,14 @@ on:
   # GitHub의 자체 schedule(cron) 트리거는 부하가 몰리면 몇 시간씩 지연될 수 있어
   # (2026-07-07 실제로 4시간+ 지연 확인) 제거하고, 외부 스케줄러(cron-job.org)가
   # GitHub API로 workflow_dispatch를 호출하는 방식으로 대체했다.
-  workflow_dispatch: {}
+  # 발송은 한국 시간 월 06:00 ~ 토 06:00에만 한다(src/main.py). 주말에 직접 발송하려면
+  # 수동 실행에서 force를 켠다.
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "발송 구간(월 06:00 ~ 토 06:00 KST) 밖에서도 발송"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,6 +41,7 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           KAKAO_NEW_TOKEN_FILE: ${{ runner.temp }}/new_kakao_refresh_token.txt
+          REPORT_FORCE: ${{ inputs.force }}
         run: python -m src.main
 
       # 카카오가 access_token 갱신 시 refresh_token을 새로 발급(로테이션)하면
@@ -76,7 +84,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/index.html
+          git add docs/index.html data/dart_cache.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0

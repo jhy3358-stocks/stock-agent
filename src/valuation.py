@@ -32,6 +32,7 @@ from typing import Optional
 from config import BETA_FLOOR, KOREA_DISCOUNT, KR_DART_CORP_CODES, M_GRAV, VALUATION
 from src.beta import adjusted_beta, prefetch_betas
 from src.concurrency import fetch_all, safe_call
+from src.dart_cache import cached
 from src.finviz_client import fetch_forward_metrics
 from src.dart_client import fetch_latest_quarter_eps as dart_latest_quarter_eps
 from src.dart_client import fetch_latest_quarter_operating_eps as dart_operating_eps
@@ -79,14 +80,16 @@ def _dart_call(what: str, fn, stock_code: str):
 
 @lru_cache(maxsize=None)
 def _dart_operating_eps(stock_code: str) -> Optional[tuple[float, str]]:
-    """(영업이익 EPS 연 환산, 분기명)."""
-    return _dart_call("DART 영업이익 EPS 조회", dart_operating_eps, stock_code)
+    """(영업이익 EPS 연 환산, 분기명). 조회 실패 시 마지막으로 저장한 값."""
+    return cached("operating_eps", stock_code,
+                  lambda: _dart_call("DART 영업이익 EPS 조회", dart_operating_eps, stock_code))
 
 
 @lru_cache(maxsize=None)
 def _dart_quarter_eps(stock_code: str) -> Optional[tuple[float, str]]:
-    """(분기 희석 EPS, 분기명)."""
-    return _dart_call("DART EPS 조회", dart_latest_quarter_eps, stock_code)
+    """(분기 희석 EPS, 분기명). 조회 실패 시 마지막으로 저장한 값."""
+    return cached("quarter_eps", stock_code,
+                  lambda: _dart_call("DART EPS 조회", dart_latest_quarter_eps, stock_code))
 
 
 def _annual_operating_eps(item: MarketItem) -> Optional[float]:
