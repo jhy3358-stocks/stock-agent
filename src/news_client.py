@@ -1,10 +1,14 @@
-"""미국 종목 뉴스 수집 (Yahoo Finance, Seeking Alpha — 둘 다 로그인 불필요).
+"""미국 종목 뉴스 수집 (Yahoo Finance, Seeking Alpha, Bloomberg — 모두 로그인 불필요).
 
 Seeking Alpha는 공개 RSS 피드(개인/비상업적 용도 명시 허용)를 사용한다.
+Bloomberg는 공식 무료 API가 없고 공식 RSS는 분야별(종목별 아님)이라, 구글 뉴스 RSS
+검색("회사명" site:bloomberg.com)으로 헤드라인과 링크만 가져온다. 기사 본문은 대부분
+블룸버그 유료 구독이 필요하다.
 """
 from __future__ import annotations
 
 import datetime as dt
+import re
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
 from xml.etree import ElementTree
@@ -12,10 +16,15 @@ from xml.etree import ElementTree
 import requests
 import yfinance as yf
 
+from config import BLOOMBERG_NEWS_NAMES
 from src.concurrency import fetch_all, safe_call
 
 SEEKING_ALPHA_RSS_URL = "https://seekingalpha.com/api/sa/combined/{ticker}.xml"
 SA_HEADERS = {"User-Agent": "Mozilla/5.0 (stock-agent personal use RSS reader)"}
+GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
+BLOOMBERG_TITLE_SUFFIXES = (" - Bloomberg.com", " - Bloomberg")
+# 기사가 아닌 블룸버그 페이지(인물 프로필, 주제 모음, 회사 정보) - 제목 패턴으로 거른다
+_NON_ARTICLE_TITLE = re.compile(r"Profile and Biography|Trending News, Latest Updates|\b(Corp|Inc|Ltd|LLC|Co)\.?$")
 
 
 def fetch_yahoo_news(ticker: str, limit: int = 3, hours: int = 24) -> List[dict]:
@@ -69,7 +78,47 @@ def fetch_seekingalpha_news(ticker: str, limit: int = 3, hours: int = 24) -> Lis
     return news
 
 
-# 최종적으로는 두 소스를 합쳐 최신순 상위 limit개만 남기므로, 소스별로는
+def parse_bloomberg_rss(xml: bytes, name: str, cutoff: dt.datetime, limit: int) -> List[dict]:
+    """구글 뉴스 RSS 검색 결과에서 제목에 회사 이름이 들어간 블룸버그 기사만 최신순으로.
+
+    구글 검색은 본문에만 이름이 나오는 기사나 방송 편성표·인물 프로필 같은 블룸버그
+    페이지도 섞어 주므로(2026-09 "Micron" 검색 56건 중 대부분 무관) 제목으로 거른다.
+    """
+    root = ElementTree.fromstring(xml)
+    news = []
+    for item in root.findall(".//item"):
+        pub_date = parse_rfc822_datetime(item.findtext("pubDate"))
+        if pub_date is None or pub_date < cutoff:
+            continue
+        if "bloomberg" not in (item.findtext("source") or "").lower():
+            continue
+        title = item.findtext("title", "")
+        for suffix in BLOOMBERG_TITLE_SUFFIXES:
+            if title.endswith(suffix):
+                title = title[: -len(suffix)]
+                break
+        if name.lower() not in title.lower() or _NON_ARTICLE_TITLE.search(title):
+            continue
+        news.append({"title": title, "url": item.findtext("link"), "date": pub_date, "source": "Bloomberg"})
+    return newest_first(news)[:limit]
+
+
+def fetch_bloomberg_news(ticker: str, limit: int = 3, hours: int = 24) -> List[dict]:
+    name = BLOOMBERG_NEWS_NAMES.get(ticker)
+    if name is None:
+        return []
+    response = requests.get(
+        GOOGLE_NEWS_RSS_URL,
+        params={"q": f'"{name}" site:bloomberg.com when:1d', "hl": "en-US", "gl": "US", "ceid": "US:en"},
+        headers=SA_HEADERS,
+        timeout=15,
+    )
+    if response.status_code != 200:
+        return []
+    return parse_bloomberg_rss(response.content, name, recent_cutoff(hours), limit)
+
+
+# 최종적으로는 세 소스를 합쳐 최신순 상위 limit개만 남기므로, 소스별로는
 # 넉넉히 모아둔다 (너무 적게 모으면 한쪽 소스 기사가 실제로는 더 최신인데도
 # 개수 제한에 걸려 후보에서 빠질 수 있다).
 _SOURCE_POOL_SIZE = 10
@@ -84,7 +133,10 @@ def get_recent_news_for_tickers(
         seeking_alpha = safe_call(
             f"Seeking Alpha 뉴스 {ticker}", fetch_seekingalpha_news, ticker, _SOURCE_POOL_SIZE, hours, default=[]
         )
-        return newest_first(yahoo + seeking_alpha)[:limit]
+        bloomberg = safe_call(
+            f"Bloomberg 뉴스 {ticker}", fetch_bloomberg_news, ticker, _SOURCE_POOL_SIZE, hours, default=[]
+        )
+        return newest_first(yahoo + seeking_alpha + bloomberg)[:limit]
 
     return fetch_all(tickers, fetch, what="미국 종목 뉴스", default=[])
 

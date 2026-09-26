@@ -52,6 +52,33 @@ KR_DART_CORP_CODES = {
     "005380": "00164742",  # 현대차(현대자동차)
 }
 
+# 블룸버그 종목 뉴스(구글 뉴스 RSS) 검색어. 블룸버그 기사는 티커가 아니라 회사 이름으로
+# 쓰여서 종목별 영문 이름을 둔다 (예: 알파벳은 기사에 "Google"로 나온다). 이 이름이 제목에
+# 들어간 기사만 남긴다. 목록에 없는 종목은 블룸버그 뉴스를 조회하지 않는다.
+BLOOMBERG_NEWS_NAMES = {
+    "AAPL": "Apple",
+    "AMZN": "Amazon",
+    "AVGO": "Broadcom",
+    "GOOGL": "Google",
+    "META": "Meta",
+    "MSFT": "Microsoft",
+    "NVDA": "Nvidia",
+    "TSLA": "Tesla",
+    "MU": "Micron",
+    "SKHY": "SK Hynix",
+    "SPCX": "SpaceX",
+    "RKLB": "Rocket Lab",
+    "MRVL": "Marvell",
+    "LITE": "Lumentum",
+    "COHR": "Coherent",
+    "LLY": "Lilly",
+    "ANET": "Arista",
+    "SNDK": "Sandisk",
+    "COST": "Costco",
+    "CRDO": "Credo",
+    "ALAB": "Astera Labs",
+}
+
 # 공시(SEC/DART) 조회 기간 (일)
 DISCLOSURE_LOOKBACK_DAYS = 2
 

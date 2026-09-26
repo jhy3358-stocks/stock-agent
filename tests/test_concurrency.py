@@ -38,6 +38,7 @@ def test_one_news_source_failure_keeps_other(monkeypatch):
         raise ConnectionError("SA down")
 
     monkeypatch.setattr(news_client, "fetch_seekingalpha_news", boom)
+    monkeypatch.setattr(news_client, "fetch_bloomberg_news", lambda *a: [])
     assert news_client.get_recent_news_for_tickers(["AAPL"]) == {"AAPL": [article]}
 
 
