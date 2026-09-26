@@ -139,33 +139,35 @@ VALUATION = {
 #   m_factor = 1 + m_score/100 (0.0~1.0 -> 1.0~2.0), beta의 지수를 1/m_factor로
 #     눌러줘 해자가 강할수록(m_score 높을수록) 베타(변동성) 페널티를 완화한다.
 #   정성적 판단 비중이 커서 g/beta보다도 더 자주 재검토가 필요하다.
-#   2026-09-26 4개 항목별로 재산정했다.
+#   2026-09-26 4개 항목별로 재산정했다. OPM 체력은 최근 4분기 영업이익률 구간으로
+#   채점한다 (50%+ 25 / 40~50% 22 / 30~40% 19 / 20~30% 16 / 10~20% 12 / 0~10% 7 / 적자 0). OPM 체력은 최근 4분기 영업이익률 구간으로
+#   채점한다 (50%+ 25 / 40~50% 22 / 30~40% 19 / 20~30% 16 / 10~20% 12 / 0~10% 7 / 적자 0).
 M_GRAV = {
     # --- 국내 ---
-    "005930": {"target_pe": None, "m_score": 59},  # 삼성전자: 메모리+파운드리+세트 다각화, 부문별 이익률 편차 커 체력/락인 보통. target_pe는 라이브 forward PE 사용
-    "000660": {"target_pe": None, "m_score": 72},  # SK하이닉스: HBM 기술 선두, 공급 qualification 장벽, 사이클 고점 OPM 우수. target_pe는 라이브 forward PE 사용
-    "005380": {"target_pe": 6.0, "m_score": 41},   # 현대차: 자본집약 완성차, 브랜드 전환비용 낮고 이익률 얇음
+    "005930": {"target_pe": None, "m_score": 69},  # 삼성전자: 메모리+파운드리+세트 다각화, 부문별 이익률 편차 커 체력/락인 보통. target_pe는 라이브 forward PE 사용
+    "000660": {"target_pe": None, "m_score": 87},  # SK하이닉스: HBM 기술 선두, 공급 qualification 장벽, 사이클 고점 OPM 우수. target_pe는 라이브 forward PE 사용
+    "005380": {"target_pe": 6.0, "m_score": 39},   # 현대차: 자본집약 완성차, 브랜드 전환비용 낮고 이익률 얇음
     # --- 미국 ---
-    "AAPL": {"target_pe": 27.0, "m_score": 82},    # iOS/서비스 생태계 락인, 하드웨어 마진은 준수하나 최상위는 아님
+    "AAPL": {"target_pe": 27.0, "m_score": 81},    # iOS/서비스 생태계 락인, 하드웨어 마진은 준수하나 최상위는 아님
     "AMZN": {"target_pe": 32.0, "m_score": 71},    # AWS 락인/규모의 경제 강하지만 커머스 부문 이익률이 전체를 희석
-    "AVGO": {"target_pe": 28.0, "m_score": 86},    # 통신칩 IP독점 + VMware 인수로 소프트웨어 락인 추가, OPM 최상위권
-    "GOOGL": {"target_pe": 22.0, "m_score": 77},   # 검색 독점적 지위, 광고주 전환비용은 낮은 편
-    "META": {"target_pe": 23.0, "m_score": 75},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
+    "AVGO": {"target_pe": 28.0, "m_score": 85},    # 통신칩 IP독점 + VMware 인수로 소프트웨어 락인 추가, OPM 최상위권
+    "GOOGL": {"target_pe": 22.0, "m_score": 76},   # 검색 독점적 지위, 광고주 전환비용은 낮은 편
+    "META": {"target_pe": 23.0, "m_score": 73},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
     "MSFT": {"target_pe": 30.0, "m_score": 88},    # Office/Windows/Azure 전방위 엔터프라이즈 락인, OPM 최상위권
-    "NVDA": {"target_pe": 35.0, "m_score": 93},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
+    "NVDA": {"target_pe": 35.0, "m_score": 94},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
     "TSLA": {"target_pe": None, "m_score": 45},    # FSD/배터리 기술력은 있으나 EV 경쟁 심화로 락인·이익률 약화 중. target_pe는 라이브 forward PE 사용
-    "MU": {"target_pe": 12.0, "m_score": 58},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
-    "SKHY": {"target_pe": 12.0, "m_score": 72},    # SK하이닉스(ADR), 000660과 동일 기업
+    "MU": {"target_pe": 12.0, "m_score": 79},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
+    "SKHY": {"target_pe": 12.0, "m_score": 87},    # SK하이닉스(ADR), 000660과 동일 기업
 
     # --- 2026-09-25 추가 ---
-    "MRVL": {"target_pe": 30.0, "m_score": 60},    # AI 커스텀실리콘(AWS/구글向) 설계선점 + 광인터커넥트, OPM은 AVGO/NVDA 대비 한 단계 아래
-    "LITE": {"target_pe": 22.0, "m_score": 43},    # 광부품(데이터센터 광트랜시버) 기술력은 있으나 경쟁 심하고 수익성 변동성 큰 부품업체
-    "COHR": {"target_pe": 20.0, "m_score": 49},    # 소재~모듈 수직계열화된 포토닉스 업체(II-VI+Coherent 합병), 다각화로 락인은 중간
-    "LLY": {"target_pe": 30.0, "m_score": 82},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
+    "MRVL": {"target_pe": 30.0, "m_score": 61},    # AI 커스텀실리콘(AWS/구글向) 설계선점 + 광인터커넥트, OPM은 AVGO/NVDA 대비 한 단계 아래
+    "LITE": {"target_pe": 22.0, "m_score": 50},    # 광부품(데이터센터 광트랜시버) 기술력은 있으나 경쟁 심하고 수익성 변동성 큰 부품업체
+    "COHR": {"target_pe": 20.0, "m_score": 52},    # 소재~모듈 수직계열화된 포토닉스 업체(II-VI+Coherent 합병), 다각화로 락인은 중간
+    "LLY": {"target_pe": 30.0, "m_score": 86},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
     "ANET": {"target_pe": 35.0, "m_score": 75},    # AI/클라우드 데이터센터 스위칭 선두, EOS 소프트웨어로 배포 후 전환비용 큼, OPM 최상위권
-    "SNDK": {"target_pe": None, "m_score": 49},    # NAND는 사실상 범용재라 기술/락인 해자 약하고 사이클 마진(현재 EBITDA 62%는 업사이클 고점). target_pe는 라이브 forward PE 사용
-    "COST": {"target_pe": 35.0, "m_score": 62},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
-    "CRDO": {"target_pe": 18.0, "m_score": 55},    # AI 인터커넥트용 SerDes/AEC 설계선점, OPM은 양호하나 소형주라 대형 경쟁사(AVGO/MRVL) 대비 해자 얕음
-    "ALAB": {"target_pe": 45.0, "m_score": 58},    # PCIe/CXL 리타이머로 Nvidia AI 서버 생태계에 초기 선점, 아직 스케일업 중이라 OPM 체력은 진행형
+    "SNDK": {"target_pe": None, "m_score": 69},    # NAND는 사실상 범용재라 기술/락인 해자 약하고 사이클 마진(현재 EBITDA 62%는 업사이클 고점). target_pe는 라이브 forward PE 사용
+    "COST": {"target_pe": 35.0, "m_score": 63},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
+    "CRDO": {"target_pe": 18.0, "m_score": 61},    # AI 인터커넥트용 SerDes/AEC 설계선점, OPM은 양호하나 소형주라 대형 경쟁사(AVGO/MRVL) 대비 해자 얕음
+    "ALAB": {"target_pe": 45.0, "m_score": 62},    # PCIe/CXL 리타이머로 Nvidia AI 서버 생태계에 초기 선점, 아직 스케일업 중이라 OPM 체력은 진행형
     # SPCX/RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (Growth FV 모듈로 대체, src/growth_data.py 참고).
 }
