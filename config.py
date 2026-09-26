@@ -115,7 +115,9 @@ VALUATION = {
     "META": {"growth_rate": 18.43, "beta": 1.243},
     "MSFT": {"growth_rate": 18.29, "beta": 1.099},
     "NVDA": {"growth_rate": 61.95, "beta": 2.215},
-    "TSLA": {"growth_rate": 23.67, "beta": 1.827},
+    # TSLA(테슬라): 주가가 현재 이익보다 로보택시·옵티머스 등 미래 사업 기대로 움직여
+    # 이익 x 멀티플 모델이 맞지 않는다(2026-09 영업이익 EPS $0.34 -> GRAV $49 vs 현재가 $372).
+    # GRAV/M-GRAV에서 빼고 RSI50 평균가(추세 기준)로 표시한다. Growth FV 가정은 두지 않음.
     "MU": {"growth_rate": 173.61, "beta": 2.213},
     "SKHY": {"growth_rate": 109.12, "beta": 2.395},
     # SPCX(스페이스X): 비상장 성격의 종목이라 Yahoo/Finviz/Seeking Alpha 어디에도
@@ -168,7 +170,7 @@ M_GRAV = {
     "META": {"target_pe": 23.0, "m_score": 73},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
     "MSFT": {"target_pe": 30.0, "m_score": 88},    # Office/Windows/Azure 전방위 엔터프라이즈 락인, OPM 최상위권
     "NVDA": {"target_pe": 35.0, "m_score": 94},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
-    "TSLA": {"target_pe": None, "m_score": 45},    # FSD/배터리 기술력은 있으나 EV 경쟁 심화로 락인·이익률 약화 중. target_pe는 라이브 forward PE 사용
+    # TSLA: VALUATION에서 제외 (위 주석 참고). 이전 m_score 45.
     "MU": {"target_pe": 12.0, "m_score": 79},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
     "SKHY": {"target_pe": 12.0, "m_score": 87},    # SK하이닉스(ADR), 000660과 동일 기업
 
