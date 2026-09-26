@@ -330,13 +330,16 @@ def compute_stage1(
     )
 
     ev_req = required_ev(current_price, s_d_n, net_cash_adj, r, n, P, L)
-    weighted_multiple = sum(seg.share * seg.multiple for seg in assumptions.segments)
+    # EV_n = R_n x Σ(비중 x 마진 x 멀티플)이라 필요 매출은 EV_req를 이 "매출 1달러당 EV"로
+    # 나눈다. 멀티플을 매출 비중으로 가중평균하면(Σ 비중 x 멀티플) 마진이 높은 사업부의
+    # 멀티플이 과소 반영돼 필요 매출이 틀어진다(2026-09 TSLA 낙관안 $600B -> $699B로 표시).
     weighted_margin = sum(
         seg.share * (seg.capex_margin if capex_ratio > 0.30 and seg.capex_margin is not None else seg.ebitda_margin)
         for seg in assumptions.segments
     )
-    ebitda_req = ev_req / weighted_multiple
-    revenue_req = ebitda_req / weighted_margin
+    ev_per_revenue = stage1_ev(assumptions.segments, 1.0, capex_ratio)
+    revenue_req = ev_req / ev_per_revenue
+    ebitda_req = revenue_req * weighted_margin
 
     return FairValueResult(
         stage=stage, fv=fv, ev_n=ev_n, ev_req=ev_req, r=r, n=n, s_d_n=s_d_n,

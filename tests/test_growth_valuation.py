@@ -151,3 +151,22 @@ def test_reverse_ev_is_consistent_with_forward_fv():
     discounted = (ev_req * assumptions.P + (1 - assumptions.P) * assumptions.L) / (1 + result.r) ** result.n
     fv_roundtrip = (discounted + result.net_cash_adj) / result.s_d_n
     assert abs(fv_roundtrip - current_price) / current_price < 0.01
+
+
+def test_stage1_required_revenue_matches_fair_value_at_that_revenue():
+    """필요 매출로 다시 계산하면 FV가 현재가와 같아져야 한다 (사업부 마진·멀티플이 다른 경우)."""
+    from src.growth_valuation import GrowthAssumptions, Segment, compute_stage1
+
+    def assumptions(R_n):
+        return GrowthAssumptions(
+            ticker="T", erp=0.05, r_floor=0.12, g_cap=1.0, decay=0.75, sbc_rate=0.0,
+            issue_discount=0.2, tax=0.21, P=0.9, n_override=5, R_n_override=R_n,
+            segments=[Segment(name="a", share=0.7, ebitda_margin=0.1, multiple=10),
+                      Segment(name="b", share=0.3, ebitda_margin=0.5, multiple=25)],
+        )
+
+    common = dict(current_price=100.0, current_shares=100.0, r0_revenue=1000.0, g0_growth=0.2,
+                  r=0.12, net_cash=0.0, fcf_ttm=10.0)
+    first = compute_stage1(assumptions=assumptions(5000.0), **common)
+    again = compute_stage1(assumptions=assumptions(first.required["revenue_req"]), **common)
+    assert abs(again.fv - 100.0) < 0.01
