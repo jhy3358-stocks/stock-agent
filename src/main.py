@@ -41,6 +41,8 @@ DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
 # 주요 지수 카드당 뉴스 개수와, 지수 간 중복 제거 전에 받아둘 후보 수
 INDEX_NEWS_LIMIT = 2
 INDEX_NEWS_POOL_SIZE = 10
+# 종목 카드당 뉴스 개수 (지수 카드와 같게 최신순 2개)
+STOCK_NEWS_LIMIT = 2
 
 
 def _resolve_report_page_url() -> str:
@@ -111,7 +113,7 @@ def main() -> None:
 
     logger.info("Yahoo Finance / Seeking Alpha 뉴스 조회 중...")
     us_news = get_recent_news_for_tickers(
-        list(US_STOCKS.keys()), hours=NEWS_LOOKBACK_HOURS
+        list(US_STOCKS.keys()), limit=STOCK_NEWS_LIMIT, hours=NEWS_LOOKBACK_HOURS
     )
 
     dart_api_key = os.environ.get("DART_API_KEY")
@@ -131,7 +133,9 @@ def main() -> None:
     )
     if naver_credentials:
         logger.info("네이버 뉴스 조회 중...")
-        kr_news = get_naver_news_for_stocks(*naver_credentials, KR_STOCKS, hours=NEWS_LOOKBACK_HOURS)
+        kr_news = get_naver_news_for_stocks(
+            *naver_credentials, KR_STOCKS, limit=STOCK_NEWS_LIMIT, hours=NEWS_LOOKBACK_HOURS
+        )
     else:
         logger.warning(
             "NAVER_CLIENT_ID/NAVER_CLIENT_SECRET이 설정되지 않아 국내 뉴스·국내 지수 뉴스 조회를 건너뜁니다."
