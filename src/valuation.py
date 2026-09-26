@@ -2,15 +2,19 @@
 
 [기존] GRAV(Growth Risk-Adjusted Valuation) 모델
   적정주가 = EPS x Target P/E x (1 + g/100) / beta
-  EPS는 가장 최근 발표 분기 EPS x 4(연 환산)다. 미국 종목은 실적 발표 8-K의 분기
-  희석 EPS(src/sec_eps.py), 국내 종목은 DART 정기보고서(분기·반기·사업보고서)의
-  보통주 희석 EPS(src/dart_client.py)를 쓰고, 둘 다 못 구하면 Yahoo 값을 쓴다(_eps 참고).
+  EPS는 가장 최근 분기 영업이익 기반 EPS의 연 환산값이다:
+    분기 영업이익 x (1 - 실효세율) / 희석 주식수 x (365 / 분기 일수)
+  순이익 EPS는 영업외 손익(투자 평가이익 등)에 크게 흔들려 전 종목 같은 정의로 영업이익을
+  쓴다. 미국 종목은 SEC XBRL + 실적 발표 8-K(src/sec_operating_eps.py), 국내 종목은 DART
+  정기보고서(src/dart_client.py). 영업이익을 구할 수 없으면 분기 희석 EPS x 4, 그마저
+  없으면 Yahoo 값으로 대체한다(_eps 참고).
   Target P/E는 현재가와 무관한 멀티플이어야 해서(현재가로 계산한 P/E를 쓰면 EPS x
   P/E가 그냥 현재가가 된다) 애널리스트 목표주가 평균 / 추정 EPS를 쓴다. 국내 종목은
   네이버페이 증권 값에 코리아 디스카운트(config.KOREA_DISCOUNT)를 적용하고
   (src/naver_finance_client.py), 미국 종목은 Yahoo 값을 쓴다(_target_pe 참고).
-  g(3~5년 이익성장률)·beta(시장 대비 변동성 배수)는 두 값 모두 라이브로 안정적으로
-  구하기 어려워 config.VALUATION에 사람이 주기적으로 조사해 채워둔 값을 쓴다.
+  g(3~5년 이익성장률)는 config.VALUATION에 사람이 주기적으로 조사해 채워둔 값을 쓰고,
+  beta는 최근 2년 주간 베타에 블룸 보정한 값을 실행 시 계산한다(src/beta.py, 실패 시
+  config 값).
 
 [신규] M-GRAV(해자 반영 GRAV) 모델
   적정주가 = EPS x Target P/E x (1 + g/100) / beta^(1/M_factor)
@@ -25,14 +29,17 @@ import os
 from functools import lru_cache
 from typing import Optional
 
-from config import KOREA_DISCOUNT, KR_DART_CORP_CODES, M_GRAV, VALUATION
+from config import BETA_FLOOR, KOREA_DISCOUNT, KR_DART_CORP_CODES, M_GRAV, VALUATION
+from src.beta import adjusted_beta, prefetch_betas
 from src.concurrency import fetch_all, safe_call
 from src.finviz_client import fetch_forward_metrics
 from src.dart_client import fetch_latest_quarter_eps as dart_latest_quarter_eps
+from src.dart_client import fetch_latest_quarter_operating_eps as dart_operating_eps
 from src.models import MarketItem
 from src.naver_finance_client import fetch_target_pe
 from src.sec_client import SEC_MAX_WORKERS
 from src.sec_eps import latest_quarter_eps
+from src.sec_operating_eps import annual_operating_eps
 from src.yf_data import yahoo_info, yahoo_ticker
 
 
@@ -57,24 +64,41 @@ def _forward_pe(item: MarketItem) -> Optional[float]:
     return _average(yahoo_pe, finviz_pe)
 
 
-# P/E는 연간 이익 기준이라 분기 EPS를 연 환산한다.
+# 영업이익 EPS를 못 구할 때 대체하는 분기 순이익 EPS의 연 환산 배수
 QUARTERS_PER_YEAR = 4
 
 
-@lru_cache(maxsize=None)
-def _dart_quarter_eps(stock_code: str) -> Optional[tuple[float, str]]:
-    """(분기 EPS, 분기명). DART_API_KEY나 corp_code가 없거나 조회 실패 시 None."""
+def _dart_call(what: str, fn, stock_code: str):
+    """DART_API_KEY나 corp_code가 없거나 조회 실패 시 None."""
     api_key = os.environ.get("DART_API_KEY")
     corp_code = KR_DART_CORP_CODES.get(stock_code)
     if not api_key or corp_code is None:
         return None
-    return safe_call(
-        f"{stock_code} DART EPS 조회", dart_latest_quarter_eps, api_key, corp_code, default=None
-    )
+    return safe_call(f"{stock_code} {what}", fn, api_key, corp_code, default=None)
+
+
+@lru_cache(maxsize=None)
+def _dart_operating_eps(stock_code: str) -> Optional[tuple[float, str]]:
+    """(영업이익 EPS 연 환산, 분기명)."""
+    return _dart_call("DART 영업이익 EPS 조회", dart_operating_eps, stock_code)
+
+
+@lru_cache(maxsize=None)
+def _dart_quarter_eps(stock_code: str) -> Optional[tuple[float, str]]:
+    """(분기 희석 EPS, 분기명)."""
+    return _dart_call("DART EPS 조회", dart_latest_quarter_eps, stock_code)
+
+
+def _annual_operating_eps(item: MarketItem) -> Optional[float]:
+    if item.market == "KR":
+        result = _dart_operating_eps(item.symbol)
+        return result[0] if result else None
+    result = safe_call(f"{item.symbol} SEC 영업이익 EPS 조회", annual_operating_eps, item.symbol, default=None)
+    return result.value if result else None
 
 
 def _quarter_eps(item: MarketItem) -> Optional[float]:
-    """가장 최근 발표 분기 EPS - 미국은 SEC 8-K, 국내는 DART 정기보고서."""
+    """가장 최근 발표 분기 희석 EPS - 미국은 SEC 8-K, 국내는 DART 정기보고서."""
     if item.market == "KR":
         result = _dart_quarter_eps(item.symbol)
         return result[0] if result else None
@@ -83,12 +107,15 @@ def _quarter_eps(item: MarketItem) -> Optional[float]:
 
 
 def _eps(item: MarketItem) -> Optional[float]:
-    """연간 EPS - 최근 발표 분기 EPS x 4 우선, 없으면 Yahoo trailingEps.
+    """연간 EPS - 영업이익 기반 EPS(연 환산) 우선, 없으면 분기 희석 EPS x 4, 없으면 Yahoo.
 
     Yahoo가 trailingEps를 안 주는 종목은 trailingPE와 현재가로 역산하고, 그마저
     없으면 적정주가가 아예 빠지지 않도록 Forward EPS(forwardEps 또는
     현재가/forwardPE)로 대체한다.
     """
+    operating = _annual_operating_eps(item)
+    if operating is not None:
+        return operating
     quarter = _quarter_eps(item)
     if quarter is not None:
         return quarter * QUARTERS_PER_YEAR
@@ -139,6 +166,14 @@ def _target_pe(item: MarketItem) -> Optional[float]:
     return forward_pe if forward_pe is not None and forward_pe > 0 else None
 
 
+def _beta(item: MarketItem) -> float:
+    """조정 베타(주간 2년 + 블룸 보정, 구하지 못하면 config.VALUATION 값). 하한 BETA_FLOOR."""
+    beta = adjusted_beta(item.symbol, item.market)
+    if beta is None:
+        beta = VALUATION[item.symbol]["beta"]
+    return max(beta, BETA_FLOOR)
+
+
 def fair_value_inputs(item: MarketItem) -> Optional[dict]:
     """적정주가 계산에 필요한 eps/target_pe/growth_rate/beta 묶음.
 
@@ -157,7 +192,7 @@ def fair_value_inputs(item: MarketItem) -> Optional[dict]:
         "eps": eps,
         "target_pe": target_pe,
         "growth_rate": valuation["growth_rate"],
-        "beta": valuation["beta"],
+        "beta": _beta(item),
     }
 
 
@@ -180,6 +215,7 @@ def prefetch_valuation_inputs(items: list[MarketItem]) -> None:
     """리포트 렌더링 중 종목마다 순차로 일어나는 Yahoo .info / Finviz / SEC·DART
     EPS / 네이버 목표 P/E 조회를 미리 병렬로 채워둔다 (모두 lru_cache라 이후 호출은 캐시를 쓴다)."""
     targets = [item for item in items if item.symbol in VALUATION]
+    prefetch_betas([(item.symbol, item.market) for item in targets])
     fetch_all(
         [yahoo_ticker(item.symbol, item.market) for item in targets],
         yahoo_info,
@@ -189,12 +225,13 @@ def prefetch_valuation_inputs(items: list[MarketItem]) -> None:
     us_symbols = [item.symbol for item in targets if item.market != "KR"]
     fetch_all(us_symbols, _finviz_forward_pe, what="Finviz", default=None)
     fetch_all(
-        us_symbols, latest_quarter_eps, what="SEC EPS", default=None, max_workers=SEC_MAX_WORKERS
+        us_symbols, annual_operating_eps, what="SEC 영업이익 EPS", default=None,
+        max_workers=SEC_MAX_WORKERS,
     )
     fetch_all(
         [item.symbol for item in targets if item.market == "KR"],
-        _dart_quarter_eps,
-        what="DART EPS",
+        _dart_operating_eps,
+        what="DART 영업이익 EPS",
         default=None,
     )
     fetch_all(
@@ -225,7 +262,7 @@ def m_grav_fair_value(item: MarketItem) -> Optional[float]:
     if target_pe is None:
         return None
 
-    beta = valuation["beta"]
+    beta = _beta(item)
     g = valuation["growth_rate"]
     m_factor = 1 + m_grav["m_score"] / 100
     return eps * target_pe * (1 + g / 100) / (beta ** (1 / m_factor))

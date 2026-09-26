@@ -139,6 +139,72 @@ def _amount(raw: Optional[str]) -> Optional[float]:
         return None
 
 
+_OPERATING_INCOME_IDS = ("dart_OperatingIncomeLoss", "ifrs-full_ProfitLossFromOperatingActivities")
+_INCOME_TAX_IDS = ("ifrs-full_IncomeTaxExpenseContinuingOperations",)
+_PRETAX_IDS = ("ifrs-full_ProfitLossBeforeTax",)
+_OWNERS_PROFIT_IDS = ("ifrs-full_ProfitLossAttributableToOwnersOfParent",)
+# 분기 실효세율 제한 범위 (src/sec_operating_eps.py와 같은 이유)
+TAX_RATE_RANGE = (0.10, 0.30)
+DEFAULT_TAX_RATE = 0.24
+QUARTERS_PER_YEAR = 4
+
+
+def _account(rows: List[dict], ids: Tuple[str, ...]) -> Optional[Tuple[Optional[float], Optional[float]]]:
+    """손익계산서 계정의 (당기 금액, 당기 누적 금액). 누적이 비어 있으면(1분기·사업보고서) 당기 금액."""
+    for account_id in ids:
+        row = next(
+            (r for r in rows if r["account_id"] == account_id and r["sj_div"] in ("IS", "CIS")),
+            None,
+        )
+        if row is not None:
+            current = _amount(row.get("thstrm_amount"))
+            cumulative = _amount(row.get("thstrm_add_amount"))
+            return current, cumulative if cumulative is not None else current
+    return None
+
+
+def fetch_latest_quarter_operating_eps(
+    api_key: str, corp_code: str, today: Optional[dt.date] = None
+) -> Optional[Tuple[float, str]]:
+    """가장 최근 정기보고서 기준 영업이익 EPS(연 환산)와 분기명.
+
+        EPS = 분기 영업이익 x (1 - 실효세율) / 희석 주식수 x 4
+
+    희석 주식수는 DART가 따로 주지 않아 지배주주 순이익 누적 / 희석 EPS 누적으로 역산한다
+    (보통주·우선주를 합친 주식수가 된다 - 현대차 약 2.6억 주로 확인). 실효세율은 올해
+    누적 법인세비용 / 세전이익. 4분기는 사업보고서(연간) - 3분기보고서 누적으로 구한다.
+    """
+    this_year = (today or dt.date.today()).year
+    for years_ago, report_code, quarter_name in _REPORTS_NEWEST_FIRST:
+        year = this_year - years_ago
+        rows = _fetch_financials(api_key, corp_code, year, report_code)
+        income = _account(rows, _OPERATING_INCOME_IDS)
+        if income is None:
+            continue
+        tax, pretax = _account(rows, _INCOME_TAX_IDS), _account(rows, _PRETAX_IDS)
+        profit, eps = _account(rows, _OWNERS_PROFIT_IDS), _eps_amounts(rows)
+        if eps is not None:
+            eps = (eps[0], eps[1] if eps[1] is not None else eps[0])
+        if None in (profit, eps) or not eps[1]:
+            return None
+        quarter_income = income[0]
+        if report_code == ANNUAL_REPORT:
+            q3 = _account(_fetch_financials(api_key, corp_code, year, Q3_REPORT), _OPERATING_INCOME_IDS)
+            if q3 is None or q3[1] is None:
+                return None
+            quarter_income = income[0] - q3[1]
+        shares = profit[1] / eps[1]
+        tax_rate = DEFAULT_TAX_RATE
+        if tax and pretax and pretax[1] and pretax[1] > 0:
+            low, high = TAX_RATE_RANGE
+            tax_rate = min(max(tax[1] / pretax[1], low), high)
+        if quarter_income is None or shares <= 0:
+            return None
+        annual_eps = quarter_income * (1 - tax_rate) / shares * QUARTERS_PER_YEAR
+        return annual_eps, f"{year}년 {quarter_name}"
+    return None
+
+
 def fetch_latest_quarter_eps(
     api_key: str, corp_code: str, today: Optional[dt.date] = None
 ) -> Optional[Tuple[float, str]]:
