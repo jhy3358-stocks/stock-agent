@@ -84,9 +84,9 @@ KR_INDEX_NEWS_QUERIES = {
 # (EPS next 5Y, Beta) / SimplyWall.st 등을 참고해 사람이 채워둔 값이다.
 # 시간이 지나면 정확도가 떨어지므로 주기적으로 갱신해야 한다 (2026-08-28 기준 조사).
 
-# 코리아 디스카운트: 국내 종목 GRAV Target P/E(네이버 목표주가 / 추정 EPS)를 이 비율만큼
-# 깎는다 (0.5 = 50% 할인 -> 멀티플 x 0.5).
-KOREA_DISCOUNT = 0.5
+# 코리아 디스카운트: 국내 종목 GRAV·M-GRAV Target P/E(네이버 목표주가 / 추정 EPS)를 이 비율만큼
+# 깎는다 (0.3 = 30% 할인 -> 멀티플 x 0.7).
+KOREA_DISCOUNT = 0.3
 
 VALUATION = {
     # --- 국내 ---
