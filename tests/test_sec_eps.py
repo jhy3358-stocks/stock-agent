@@ -87,3 +87,37 @@ def test_naver_target_pe_is_target_price_over_consensus_eps():
     }
     assert round(target_pe_from_integration(data), 2) == 10.31
     assert target_pe_from_integration({"consensusInfo": None, "totalInfos": []}) is None
+
+
+def test_split_adjusts_facts_not_restated_in_latest_filing():
+    from src.sec_eps import _split_adjusted_latest
+
+    # KLAC 10:1 분할: 10-K(2026-08-06)가 전년 연간을 분할 기준으로 재작성, 올해 3분기 누적은 분할 전 값만 존재
+    facts = [
+        _fact("2024-07-01", "2025-06-30", 30.37, "2025-08-07"),
+        _fact("2024-07-01", "2025-06-30", 3.037, "2026-08-06"),
+        _fact("2023-07-01", "2024-06-30", 22.07, "2025-08-07"),
+        _fact("2023-07-01", "2024-06-30", 2.207, "2026-08-06"),
+        _fact("2025-07-01", "2026-03-31", 26.26, "2026-04-30"),
+        _fact("2025-07-01", "2026-06-30", 3.66, "2026-08-06"),
+    ]
+    adjusted = _split_adjusted_latest(facts)
+    assert round(_xbrl_latest_quarter(adjusted), 2) == 1.03  # 3.66 - 2.626
+
+
+def test_no_split_keeps_latest_values():
+    from src.sec_eps import _split_adjusted_latest
+
+    assert sorted(f.val for f in _split_adjusted_latest(COST_FACTS)) == sorted(f.val for f in COST_FACTS)
+
+
+def test_small_eps_restatement_is_not_a_split():
+    from src.sec_eps import _split_adjusted_latest
+
+    facts = [
+        _fact("2025-02-01", "2025-10-31", -0.28, "2025-12-03"),
+        _fact("2024-02-01", "2025-01-31", -0.10, "2025-03-05"),
+        _fact("2024-02-01", "2025-01-31", -0.07, "2026-03-05"),
+        _fact("2025-02-01", "2026-01-31", -0.20, "2026-03-05"),
+    ]
+    assert sorted(f.val for f in _split_adjusted_latest(facts)) == [-0.28, -0.2, -0.07]

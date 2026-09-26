@@ -26,16 +26,29 @@ from src.sec_client import SEC_HEADERS, all_ciks, fetch_submissions
 
 logger = logging.getLogger(__name__)
 
-CONCEPT_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik10}/us-gaap/{concept}.json"
+# 개별 항목(companyconcept) API는 최근 값이 빠져 있는 경우가 있어(2026-09 CDNS 확인)
+# 회사 전체 XBRL(companyfacts)에서 찾는다.
+COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik10}.json"
 ARCHIVE_BASE = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession_nodash}/"
-# 희석 EPS를 따로 공시하지 않는(희석 효과 없음) 회사는 BasicAndDiluted 하나로 보고한다.
-EPS_CONCEPTS = ("EarningsPerShareDiluted", "EarningsPerShareBasicAndDiluted")
+# 희석 EPS 항목 이름 (우선순위 순). 희석 효과가 없는 회사는 BasicAndDiluted 하나로,
+# 중단영업이 없는 일부 회사(예: ABNB)는 계속영업 희석 EPS로 보고한다.
+EPS_CONCEPTS = (
+    "EarningsPerShareDiluted",
+    "EarningsPerShareBasicAndDiluted",
+    "IncomeLossFromContinuingOperationsPerDilutedShare",
+)
 PERIODIC_FORMS = {"10-Q", "10-K", "10-Q/A", "10-K/A"}
 
 # 52/53주 회계연도(예: 코스트코)도 연간으로 잡히도록 여유를 둔다.
 ANNUAL_MIN_DAYS = 350
 # "1년 전 같은 기간"을 찾을 때 허용하는 기간 끝 날짜/길이 차이 (52/53주 회계연도 대응)
 PERIOD_TOLERANCE_DAYS = 14
+# 같은 기간 EPS가 최신 공시와 이전 공시에서 이 배수 이상 다르면 주식분할로 본다.
+# EPS가 작으면 재작성·반올림만으로도 비율이 크게 흔들려(예: -0.10 -> -0.07) 절댓값이
+# SPLIT_MIN_EPS 이상인 값만, 그런 기간이 SPLIT_MIN_PERIODS개 이상일 때만 비교한다.
+SPLIT_MIN_RATIO = 1.9
+SPLIT_MIN_EPS = 0.25
+SPLIT_MIN_PERIODS = 2
 # 보도자료 표의 전년 동분기 EPS와 XBRL로 계산한 값의 허용 오차 (반올림 누적 대비)
 EPS_MATCH_TOLERANCE = 0.02
 
@@ -71,32 +84,69 @@ def _get(url: str) -> requests.Response:
     return response
 
 
+def _parse_facts(raws: List[dict]) -> List[_Fact]:
+    return [
+        _Fact(
+            dt.date.fromisoformat(raw["start"]),
+            dt.date.fromisoformat(raw["end"]),
+            float(raw["val"]),
+            dt.date.fromisoformat(raw["filed"]),
+        )
+        for raw in raws
+        if raw.get("form") in PERIODIC_FORMS and "start" in raw
+    ]
+
+
+def _split_adjusted_latest(facts: List[_Fact]) -> List[_Fact]:
+    """기간별로 가장 나중 제출본만 남기고, 최신 공시 이후로 다시 보고되지 않은 과거 값은
+    주식분할 비율로 나눠 최신 기준에 맞춘다.
+
+    분할 후 첫 10-Q/10-K는 비교 기간(전년 등)만 분할 기준으로 재작성하고, 올해 앞선
+    분기 누적값은 분할 전 제출본에만 남는다. 그대로 쓰면 "연간 - 3분기 누적" 같은
+    계산이 틀어진다(2026-09 KLAC 10:1 분할에서 4분기 EPS가 -22.6으로 계산됨).
+    분할 비율은 같은 기간을 최신 공시와 그 직전 공시가 각각 보고한 값의 비로 구한다.
+    """
+    newest = max(f.filed for f in facts)
+    by_period: dict[Tuple[dt.date, dt.date], List[_Fact]] = {}
+    for fact in facts:
+        by_period.setdefault((fact.start, fact.end), []).append(fact)
+
+    ratios = []
+    for group in by_period.values():
+        restated = [f for f in group if f.filed == newest]
+        earlier = [f for f in group if f.filed < newest]
+        if not restated or not earlier:
+            continue
+        previous = max(earlier, key=lambda f: f.filed)
+        if min(abs(previous.val), abs(restated[0].val)) >= SPLIT_MIN_EPS and (
+            (previous.val > 0) == (restated[0].val > 0)
+        ):
+            ratios.append(previous.val / restated[0].val)
+    ratio = sorted(ratios)[len(ratios) // 2] if len(ratios) >= SPLIT_MIN_PERIODS else 1.0
+    split = ratio >= SPLIT_MIN_RATIO or ratio <= 1 / SPLIT_MIN_RATIO
+
+    result = []
+    for group in by_period.values():
+        latest = max(group, key=lambda f: f.filed)
+        if split and latest.filed < newest:
+            latest = _Fact(latest.start, latest.end, latest.val / ratio, latest.filed)
+        result.append(latest)
+    return result
+
+
 def _eps_facts(cik10: str) -> List[_Fact]:
-    """10-Q/10-K XBRL 희석 EPS 값들. 같은 기간이 여러 번 보고됐으면 가장 나중 제출본을 쓴다
-    (주식분할 등으로 과거 값이 재작성된 경우 최신 기준을 따르기 위해)."""
+    """10-Q/10-K XBRL 희석 EPS 값들 (기간별 최신 제출본, 주식분할 보정).
+
+    회사가 EPS 항목 이름을 중간에 바꾸는 경우가 있어(예: BKR은 2024년 이후
+    EarningsPerShareDiluted 미보고) 후보 항목 중 가장 최근 기간까지 보고된 것을 쓴다.
+    """
+    us_gaap = _get(COMPANY_FACTS_URL.format(cik10=cik10)).json().get("facts", {}).get("us-gaap", {})
+    best: List[_Fact] = []
     for concept in EPS_CONCEPTS:
-        try:
-            data = _get(CONCEPT_URL.format(cik10=cik10, concept=concept)).json()
-        except requests.HTTPError as e:
-            if e.response is not None and e.response.status_code == 404:
-                continue
-            raise
-        latest: dict[Tuple[dt.date, dt.date], _Fact] = {}
-        for raw in data.get("units", {}).get("USD/shares", []):
-            if raw.get("form") not in PERIODIC_FORMS or "start" not in raw:
-                continue
-            fact = _Fact(
-                dt.date.fromisoformat(raw["start"]),
-                dt.date.fromisoformat(raw["end"]),
-                float(raw["val"]),
-                dt.date.fromisoformat(raw["filed"]),
-            )
-            key = (fact.start, fact.end)
-            if key not in latest or fact.filed >= latest[key].filed:
-                latest[key] = fact
-        if latest:
-            return list(latest.values())
-    return []
+        facts = _parse_facts(us_gaap.get(concept, {}).get("units", {}).get("USD/shares", []))
+        if facts and (not best or max(f.end for f in facts) > max(f.end for f in best)):
+            best = facts
+    return _split_adjusted_latest(best) if best else []
 
 
 def _near(a: dt.date, b: dt.date) -> bool:
@@ -131,12 +181,20 @@ def _release_context(facts: List[_Fact]) -> _ReleaseContext:
     )
     if prior is None:
         return _ReleaseContext(None, latest.val)
-    # 전년 회계연도 누적값 중 prior 바로 다음 것 - prior = 다음 분기의 전년 동분기
+    # 전년 회계연도 누적값 중 prior 바로 다음 것 = 다음 분기의 전년 동분기가 끝나는 시점.
+    # 그 분기 3개월치 값이 따로 공시돼 있으면 그대로 쓴다 - 과거 누적값이 일부만
+    # 재작성되면 누적값끼리 빼서 구한 값이 틀어진다(2026-09 CRWD 확인).
     following = sorted(
         (f for f in facts if f.start == prior.start and f.end > prior.end),
         key=lambda f: f.end,
     )
-    return _ReleaseContext(following[0].val - prior.val if following else None, latest.val)
+    if not following:
+        return _ReleaseContext(None, latest.val)
+    direct = _first(
+        f for f in facts if f.end == following[0].end and f.days < ANNUAL_MIN_DAYS / 3
+    )
+    year_ago = direct.val if direct else following[0].val - prior.val
+    return _ReleaseContext(year_ago, latest.val)
 
 
 def _xbrl_latest_quarter(facts: List[_Fact]) -> Optional[float]:

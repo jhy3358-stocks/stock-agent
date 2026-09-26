@@ -132,7 +132,11 @@ def _target_pe(item: MarketItem) -> Optional[float]:
         if target_pe is not None:
             return target_pe
     fallback = (M_GRAV.get(item.symbol) or {}).get("target_pe")
-    return fallback if fallback is not None else _forward_pe(item)
+    if fallback is not None:
+        return fallback
+    # 적자 예상 종목은 Forward P/E가 음수라 멀티플로 쓸 수 없다.
+    forward_pe = _forward_pe(item)
+    return forward_pe if forward_pe is not None and forward_pe > 0 else None
 
 
 def fair_value_inputs(item: MarketItem) -> Optional[dict]:
