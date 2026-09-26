@@ -37,3 +37,15 @@ def test_three_sources_merged_newest_first(monkeypatch):
     monkeypatch.setattr(news_client, "fetch_bloomberg_news", lambda *a: [article("Bloomberg", 10)])
     result = news_client.get_recent_news_for_tickers(["MU"], limit=2)
     assert [n["source"] for n in result["MU"]] == ["Seeking Alpha", "Bloomberg"]
+
+
+def test_rejected_request_raises_for_warning(monkeypatch):
+    import pytest
+
+    class _Resp:
+        status_code = 429
+        content = b""
+
+    monkeypatch.setattr(news_client.requests, "get", lambda *a, **k: _Resp())
+    with pytest.raises(RuntimeError, match="429"):
+        news_client.fetch_bloomberg_news("MU")

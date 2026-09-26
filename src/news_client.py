@@ -8,6 +8,7 @@ Bloomberg는 공식 무료 API가 없고 공식 RSS는 분야별(종목별 아�
 from __future__ import annotations
 
 import datetime as dt
+import logging
 import re
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
@@ -18,6 +19,8 @@ import yfinance as yf
 
 from config import BLOOMBERG_NEWS_NAMES
 from src.concurrency import fetch_all, safe_call
+
+logger = logging.getLogger(__name__)
 
 SEEKING_ALPHA_RSS_URL = "https://seekingalpha.com/api/sa/combined/{ticker}.xml"
 SA_HEADERS = {"User-Agent": "Mozilla/5.0 (stock-agent personal use RSS reader)"}
@@ -113,8 +116,10 @@ def fetch_bloomberg_news(ticker: str, limit: int = 3, hours: int = 24) -> List[d
         headers=SA_HEADERS,
         timeout=15,
     )
+    # 구글이 요청을 거부(차단·요청 과다)하면 조용히 빈 결과가 되지 않도록 예외로 올려
+    # 호출부 safe_call이 경고를 남기게 한다.
     if response.status_code != 200:
-        return []
+        raise RuntimeError(f"구글 뉴스 RSS HTTP {response.status_code}")
     return parse_bloomberg_rss(response.content, name, recent_cutoff(hours), limit)
 
 
@@ -127,6 +132,8 @@ _SOURCE_POOL_SIZE = 10
 def get_recent_news_for_tickers(
     tickers: List[str], limit: int = 3, hours: int = 24
 ) -> dict:
+    bloomberg_found: dict = {}
+
     def fetch(ticker: str) -> List[dict]:
         # 한 소스가 실패해도 다른 소스 기사는 살린다.
         yahoo = safe_call(f"Yahoo 뉴스 {ticker}", fetch_yahoo_news, ticker, _SOURCE_POOL_SIZE, hours, default=[])
@@ -136,9 +143,16 @@ def get_recent_news_for_tickers(
         bloomberg = safe_call(
             f"Bloomberg 뉴스 {ticker}", fetch_bloomberg_news, ticker, _SOURCE_POOL_SIZE, hours, default=[]
         )
+        bloomberg_found[ticker] = len(bloomberg)
         return newest_first(yahoo + seeking_alpha + bloomberg)[:limit]
 
-    return fetch_all(tickers, fetch, what="미국 종목 뉴스", default=[])
+    result = fetch_all(tickers, fetch, what="미국 종목 뉴스", default=[])
+    shown = sum(1 for news in result.values() for n in news if n["source"] == "Bloomberg")
+    logger.info(
+        "Bloomberg 뉴스 후보 %d건(%d개 종목), 최신순 선택 후 표시 %d건",
+        sum(bloomberg_found.values()), sum(1 for c in bloomberg_found.values() if c), shown,
+    )
+    return result
 
 
 def get_recent_yahoo_news_for_tickers(
