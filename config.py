@@ -27,7 +27,6 @@ US_STOCKS = {
     "SNDK": "샌디스크",
     "COST": "코스트코",
     "CRDO": "크레도 테크놀로지",
-    "ALAB": "아스테라랩스",
 }
 
 # pykrx의 코스피 지수 조회 엔드포인트가 KRX 서버 세션 이슈로 불안정하여,
@@ -76,7 +75,6 @@ BLOOMBERG_NEWS_NAMES = {
     "SNDK": "Sandisk",
     "COST": "Costco",
     "CRDO": "Credo",
-    "ALAB": "Astera Labs",
 }
 
 # 공시(SEC/DART) 조회 기간 (일)
@@ -160,7 +158,6 @@ VALUATION = {
     "SNDK": {"growth_rate": 54.54, "beta": 5.20},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     "COST": {"growth_rate": 11.03, "beta": 0.88},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     "CRDO": {"growth_rate": 52.78, "beta": 3.24},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    "ALAB": {"growth_rate": 64.96, "beta": 3.73},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     # RKLB(로켓랩): forward EPS가 소스마다 부호가 엇갈리고(Yahoo +0.046 vs
     # Finviz 내년 EPS -0.04) EPS next 5Y 자체가 없어(적자 기업) GRAV에 넣지
     # 않는다. TTM EBITDA 마진이 아직 음수라 Growth FV 2단계로 라우팅됨
@@ -210,6 +207,5 @@ M_GRAV = {
     "SNDK": {"target_pe": None, "m_score": 69},    # NAND는 사실상 범용재라 기술/락인 해자 약하고 사이클 마진(현재 EBITDA 62%는 업사이클 고점). target_pe는 라이브 forward PE 사용
     "COST": {"target_pe": 35.0, "m_score": 63},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
     "CRDO": {"target_pe": 18.0, "m_score": 61},    # AI 인터커넥트용 SerDes/AEC 설계선점, OPM은 양호하나 소형주라 대형 경쟁사(AVGO/MRVL) 대비 해자 얕음
-    "ALAB": {"target_pe": 45.0, "m_score": 62},    # PCIe/CXL 리타이머로 Nvidia AI 서버 생태계에 초기 선점, 아직 스케일업 중이라 OPM 체력은 진행형
     # SPCX/RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (Growth FV 모듈로 대체, src/growth_data.py 참고).
 }
