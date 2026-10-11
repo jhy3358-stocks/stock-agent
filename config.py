@@ -19,14 +19,8 @@ US_STOCKS = {
     "SKHY": "SK하이닉스(나스닥)",
     "SPCX": "스페이스X",
     "RKLB": "로켓랩",
-    "MRVL": "마벨 테크놀로지",
-    "LITE": "루멘텀",
-    "COHR": "코히런트",
     "LLY": "일라이릴리",
-    "ANET": "아리스타 네트웍스",
-    "SNDK": "샌디스크",
     "COST": "코스트코",
-    "CRDO": "크레도 테크놀로지",
 }
 
 # pykrx의 코스피 지수 조회 엔드포인트가 KRX 서버 세션 이슈로 불안정하여,
@@ -67,14 +61,8 @@ BLOOMBERG_NEWS_NAMES = {
     "SKHY": "SK Hynix",
     "SPCX": "SpaceX",
     "RKLB": "Rocket Lab",
-    "MRVL": "Marvell",
-    "LITE": "Lumentum",
-    "COHR": "Coherent",
     "LLY": "Lilly",
-    "ANET": "Arista",
-    "SNDK": "Sandisk",
     "COST": "Costco",
-    "CRDO": "Credo",
 }
 
 # 공시(SEC/DART) 조회 기간 (일)
@@ -148,16 +136,8 @@ VALUATION = {
     # SPCX(스페이스X): 비상장 성격의 종목이라 Yahoo/Finviz/Seeking Alpha 어디에도
     # EPS 5년 성장률·베타가 공시되어 있지 않아 값을 채우지 않는다.
     # (VALUATION 미확보 -> GRAV/M-GRAV 대신 Growth FV 모듈로 라우팅됨. src/growth_data.py 참고)
-    "MRVL": {"growth_rate": 53.85, "beta": 2.28},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    "LITE": {"growth_rate": 76.28, "beta": 1.54},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    "COHR": {"growth_rate": 48.98, "beta": 2.11},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     "LLY": {"growth_rate": 30.55, "beta": 0.45},   # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    "ANET": {"growth_rate": 28.98, "beta": 1.61},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    # SNDK(샌디스크): 2025년 WDC에서 스핀오프된 지 얼마 안 돼 beta가 아직 불안정할
-    # 수 있다(Finviz 5.20 - 다른 종목 대비 이례적으로 높음). 주기적으로 재확인 필요.
-    "SNDK": {"growth_rate": 54.54, "beta": 5.20},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     "COST": {"growth_rate": 11.03, "beta": 0.88},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    "CRDO": {"growth_rate": 52.78, "beta": 3.24},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     # RKLB(로켓랩): forward EPS가 소스마다 부호가 엇갈리고(Yahoo +0.046 vs
     # Finviz 내년 EPS -0.04) EPS next 5Y 자체가 없어(적자 기업) GRAV에 넣지
     # 않는다. TTM EBITDA 마진이 아직 음수라 Growth FV 2단계로 라우팅됨
@@ -199,13 +179,7 @@ M_GRAV = {
     "SKHY": {"target_pe": 12.0, "m_score": 87},    # SK하이닉스(ADR), 000660과 동일 기업
 
     # --- 2026-09-25 추가 ---
-    "MRVL": {"target_pe": 30.0, "m_score": 61},    # AI 커스텀실리콘(AWS/구글向) 설계선점 + 광인터커넥트, OPM은 AVGO/NVDA 대비 한 단계 아래
-    "LITE": {"target_pe": 22.0, "m_score": 50},    # 광부품(데이터센터 광트랜시버) 기술력은 있으나 경쟁 심하고 수익성 변동성 큰 부품업체
-    "COHR": {"target_pe": 20.0, "m_score": 52},    # 소재~모듈 수직계열화된 포토닉스 업체(II-VI+Coherent 합병), 다각화로 락인은 중간
     "LLY": {"target_pe": 30.0, "m_score": 86},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
-    "ANET": {"target_pe": 35.0, "m_score": 75},    # AI/클라우드 데이터센터 스위칭 선두, EOS 소프트웨어로 배포 후 전환비용 큼, OPM 최상위권
-    "SNDK": {"target_pe": None, "m_score": 69},    # NAND는 사실상 범용재라 기술/락인 해자 약하고 사이클 마진(현재 EBITDA 62%는 업사이클 고점). target_pe는 라이브 forward PE 사용
     "COST": {"target_pe": 35.0, "m_score": 63},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
-    "CRDO": {"target_pe": 18.0, "m_score": 61},    # AI 인터커넥트용 SerDes/AEC 설계선점, OPM은 양호하나 소형주라 대형 경쟁사(AVGO/MRVL) 대비 해자 얕음
     # SPCX/RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (Growth FV 모듈로 대체, src/growth_data.py 참고).
 }
