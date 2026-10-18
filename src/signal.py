@@ -6,14 +6,14 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from config import RSI_PERIOD
+from config import RSI_PERIOD, VALUATION
 from src.concurrency import safe_call
 from src.formatting import format_price
 from src.growth_data import RSI50_120M_SYMBOLS, growth_fair_value, item_rsi50, required_condition_text
 from src.indicators import gap_pct, rsi
 from src.models import MarketItem
 from src.rsi50 import rsi50_fair_value
-from src.valuation import fair_value_inputs, is_sane, m_grav_fair_value, target_price
+from src.valuation import fair_value_inputs, grav_readiness, is_sane, m_grav_fair_value, target_price
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +143,24 @@ def fair_value_line(item: MarketItem) -> str:
         for v in _fair_values(item)
     ]
     return ", ".join(parts) if parts else "적정주가 데이터 없음"
+
+
+def grav_readiness_line(item: MarketItem) -> Optional[str]:
+    """GRAV·M-GRAV를 아직 못 쓰는 종목(config.VALUATION 미등록: TSLA/SPCX/RKLB 등)이
+    전환 가능한 상태가 되면 리포트에 알림 한 줄을 띄운다. 아니면 None.
+
+    g·beta·m_score는 사람이 조사해 config에 넣어야 실제로 GRAV·M-GRAV로 바뀐다.
+    """
+    if item.market == "INDEX" or item.symbol in VALUATION:
+        return None
+    ready = safe_call(f"{item.symbol} GRAV 전환 가능 여부 확인", grav_readiness, item, default=None)
+    if ready is None:
+        return None
+    return (
+        f"※ GRAV·M-GRAV 전환 가능: EPS {format_price(ready.eps, item.unit)}, "
+        f"Target P/E {ready.target_pe:.1f}, 추정 GRAV {format_price(ready.estimate, item.unit)} "
+        f"(g 0% 가정·beta {ready.beta:.2f}) → config.py VALUATION(g·beta)·M_GRAV(m_score) 입력 필요"
+    )
 
 
 def trading_signal(item: MarketItem) -> Optional[str]:

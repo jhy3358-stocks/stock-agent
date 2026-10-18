@@ -177,3 +177,35 @@ def test_rsi50_120m_symbol_skips_growth_fv(monkeypatch):
     line = signal.fair_value_line(item)
     assert "Growth FV" not in line
     assert "120분봉/교차점 평균" in line
+
+
+def _ready_setup(monkeypatch, symbol, eps, target_pe, beta):
+    import src.valuation as valuation
+
+    monkeypatch.setattr(valuation, "_eps", lambda item: eps)
+    monkeypatch.setattr(valuation, "_target_pe", lambda item: target_pe)
+    monkeypatch.setattr(valuation, "yahoo_info", lambda ticker: {"beta": beta})
+    item = _item()
+    item.symbol = symbol
+    return item
+
+
+def test_grav_readiness_line_shown_when_inputs_available(monkeypatch):
+    # EPS 2 x Target P/E 100 / beta 2 = 100 -> 현재가 110의 범위 안
+    item = _ready_setup(monkeypatch, "SPCX", 2.0, 100.0, 2.0)
+    line = signal.grav_readiness_line(item)
+    assert line.startswith("※ GRAV·M-GRAV 전환 가능")
+    assert "$100.00" in line
+
+
+def test_grav_readiness_line_hidden_when_eps_negative_or_out_of_band(monkeypatch):
+    assert signal.grav_readiness_line(_ready_setup(monkeypatch, "RKLB", -0.3, 100.0, 2.0)) is None
+    # TSLA처럼 EPS는 양수지만 추정 GRAV(0.34 x 183 / 1.9 = $32.8)가 현재가 1/10 미만
+    item = _ready_setup(monkeypatch, "TSLA", 0.34, 183.0, 1.9)
+    item.current_price = 355.0
+    assert signal.grav_readiness_line(item) is None
+
+
+def test_grav_readiness_line_skips_symbols_already_in_valuation(monkeypatch):
+    item = _ready_setup(monkeypatch, "NVDA", 2.0, 100.0, 2.0)
+    assert signal.grav_readiness_line(item) is None

@@ -8,7 +8,7 @@ from typing import Callable, Dict, List
 from config import RSI_PERIOD
 from src.formatting import format_price, rsi_text, volume_text
 from src.models import MarketItem
-from src.signal import fair_value_line, trading_signal
+from src.signal import fair_value_line, grav_readiness_line, trading_signal
 
 DisclosureMap = Dict[str, List[dict]]
 
@@ -40,6 +40,10 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
         if signal:
             valuation_rows += f"""
       <div class="row">{html.escape(signal)}</div>"""
+        readiness = grav_readiness_line(item)
+        if readiness:
+            valuation_rows += f"""
+      <div class="row">{html.escape(readiness)}</div>"""
     return f"""
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>

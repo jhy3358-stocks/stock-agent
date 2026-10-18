@@ -7,7 +7,7 @@ from typing import List
 from config import RSI_PERIOD
 from src.formatting import format_price, rsi_text, volume_text
 from src.models import MarketItem
-from src.signal import fair_value_line, trading_signal
+from src.signal import fair_value_line, grav_readiness_line, trading_signal
 
 
 def format_item(item: MarketItem) -> str:
@@ -22,6 +22,9 @@ def format_item(item: MarketItem) -> str:
         signal = trading_signal(item)
         if signal:
             lines.append(signal)
+        readiness = grav_readiness_line(item)
+        if readiness:
+            lines.append(readiness)
     return "\n".join(lines)
 
 

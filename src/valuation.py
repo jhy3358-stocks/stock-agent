@@ -26,6 +26,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional
 
@@ -212,6 +213,35 @@ SANITY_BAND = 10
 
 def is_sane(value: float, current_price: float) -> bool:
     return current_price / SANITY_BAND <= value <= current_price * SANITY_BAND
+
+
+@dataclass
+class GravReadiness:
+    eps: float
+    target_pe: float
+    beta: float
+    estimate: float  # g=0%로 잡은 GRAV 추정치
+
+
+def grav_readiness(item: MarketItem) -> Optional[GravReadiness]:
+    """config.VALUATION에 아직 없는 종목(RSI50 평균가 등을 쓰는 중)이 GRAV·M-GRAV로
+    넘어갈 수 있는 상태인지 판정한다. 리포트 알림용이라 적정주가 계산 자체는 바꾸지 않는다.
+
+    GRAV와 같은 방식으로 EPS·Target P/E를 구해 둘 다 양수이고, g=0%·Yahoo 베타(없으면 1.0,
+    하한 BETA_FLOOR)로 잡은 GRAV 추정치가 범위 검사(현재가 1/10~10배)를 통과하면 반환한다.
+    g는 사람이 조사해 넣는 값이라 보수적으로 0%로 둔다.
+    """
+    eps = _eps(item)
+    if eps is None or eps <= 0:
+        return None
+    target_pe = _target_pe(item)
+    if target_pe is None:
+        return None
+    beta = max(yahoo_info(yahoo_ticker(item.symbol, item.market)).get("beta") or 1.0, BETA_FLOOR)
+    estimate = target_price(eps, target_pe, 0.0, beta)
+    if not is_sane(estimate, item.current_price):
+        return None
+    return GravReadiness(eps, target_pe, beta, estimate)
 
 
 def prefetch_valuation_inputs(items: list[MarketItem]) -> None:
