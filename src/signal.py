@@ -9,7 +9,7 @@ from typing import Optional
 from config import RSI_PERIOD
 from src.concurrency import safe_call
 from src.formatting import format_price
-from src.growth_data import growth_fair_value, item_rsi50, required_condition_text
+from src.growth_data import RSI50_120M_SYMBOLS, growth_fair_value, item_rsi50, required_condition_text
 from src.indicators import gap_pct, rsi
 from src.models import MarketItem
 from src.rsi50 import rsi50_fair_value
@@ -81,6 +81,8 @@ def _compute_valuations(item: MarketItem) -> list[_Valuation]:
             result.append(_Valuation(label, value, gap_pct(item.current_price, value), label))
     if result:
         return result
+    if item.symbol in RSI50_120M_SYMBOLS:
+        return []  # Growth FV를 건너뛰고 120분봉 RSI50 평균가로 넘어간다
 
     growth = growth_fair_value(item)
     if growth is not None and growth.stage in GROWTH_FV_STAGES and _sane(item, "Growth FV", growth.fv):
@@ -100,7 +102,7 @@ def _rsi50_valuation(item: MarketItem) -> Optional[_Valuation]:
     """RSI50 평균가 적정주가 - GRAV/M-GRAV/Growth FV(1·2단계) 모두 못 구할 때 쓴다.
 
     최근 126거래일 동안 RSI(14)가 50을 지나간 가격들의 평균(교차점이 없으면 역산
-    P50 평균)으로, 기업가치가 아니라 추세의 중심 가격이라 라벨에 "추세 기준"을
+    P50 평균, SPCX/RKLB는 120분봉 RSI 기준)으로, 기업가치가 아니라 추세의 중심 가격이라 라벨에 "추세 기준"을
     밝혀 다른 모델과 구분한다.
     """
     result = item_rsi50(item)
@@ -109,6 +111,8 @@ def _rsi50_valuation(item: MarketItem) -> Optional[_Valuation]:
         return None
     value, method = fair
     notes = [method]
+    if result.timeframe == "120m":
+        notes.insert(0, "120분봉")
     if result.data_insufficient:
         notes.append("이력 짧음")
     return _Valuation(

@@ -74,3 +74,36 @@ def test_rsi50_fair_value_prefers_cross_then_p50():
     assert rsi50_fair_value(Rsi50Result(95.0, 3, 90.0, False)) == (95.0, "교차점 평균")
     assert rsi50_fair_value(Rsi50Result(float("nan"), 0, 90.0, False)) == (90.0, "P50 역산 평균")
     assert rsi50_fair_value(Rsi50Result(float("nan"), 0, float("nan"), True)) is None
+
+
+def test_resample_120m_groups_from_session_open_and_across_dst():
+    from src.growth_data import resample_120m
+
+    # 서머타임 종료(2026-11-01) 전후 하루씩, 60분봉 09:30~15:30 7개
+    days = ["2026-10-30", "2026-11-02"]
+    idx = pd.DatetimeIndex(
+        [pd.Timestamp(f"{d} {h}", tz="America/New_York") for d in days
+         for h in ["09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30"]]
+    )
+    close = pd.Series(range(len(idx)), index=idx, dtype=float)
+    bars = resample_120m(close)
+
+    assert [t.strftime("%H:%M") for t in bars.index[:4]] == ["09:30", "11:30", "13:30", "15:30"]
+    assert [t.strftime("%H:%M") for t in bars.index[4:]] == ["09:30", "11:30", "13:30", "15:30"]
+    # 각 120분봉 종가는 그 구간 마지막 60분봉 종가
+    assert bars.tolist() == [1.0, 3.0, 5.0, 6.0, 8.0, 10.0, 12.0, 13.0]
+
+
+def test_intraday_window_covers_last_126_trading_days():
+    # 120분봉 하루 4봉 x 300거래일: 평균 구간은 최근 126봉이 아니라 최근 126거래일(504봉)
+    days = pd.bdate_range("2025-01-01", periods=300)
+    idx = pd.DatetimeIndex([d + pd.Timedelta(minutes=m) for d in days for m in (570, 690, 810, 930)])
+    close = pd.Series([50.0 + (i % 7) - (i % 3) + i * 0.01 for i in range(len(idx))], index=idx)
+    _, p50 = wilder_rsi_and_p50(close)
+
+    result = compute_rsi50(close, timeframe="120m")
+    assert abs(result.avg_p50 - p50.iloc[-126 * 4:].mean()) < 1e-9
+    assert result.data_insufficient is False  # 300거래일 >= 126 + 100
+
+    short = compute_rsi50(close.iloc[: 200 * 4], timeframe="120m")
+    assert short.data_insufficient is True  # 200거래일 < 226 (봉은 800개여도)

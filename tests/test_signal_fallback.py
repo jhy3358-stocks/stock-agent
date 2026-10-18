@@ -163,3 +163,17 @@ def test_valuation_exception_is_isolated(monkeypatch):
     monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(float("nan"), 0, float("nan"), True))
     assert signal.fair_value_line(_item()) == "적정주가 데이터 없음"
     assert signal.trading_signal(_item()) is None
+
+
+def test_rsi50_120m_symbol_skips_growth_fv(monkeypatch):
+    # RKLB처럼 RSI50_120M_SYMBOLS에 든 종목은 Growth FV 2단계가 있어도 120분봉 RSI50을 쓴다.
+    _no_grav(monkeypatch)
+    item = _item()
+    item.symbol = "RKLB"
+    monkeypatch.setattr(signal, "growth_fair_value", lambda item: (_ for _ in ()).throw(AssertionError("호출되면 안 됨")))
+    monkeypatch.setattr(
+        signal, "item_rsi50", lambda item: Rsi50Result(100.0, 5, 98.0, False, timeframe="120m")
+    )
+    line = signal.fair_value_line(item)
+    assert "Growth FV" not in line
+    assert "120분봉/교차점 평균" in line

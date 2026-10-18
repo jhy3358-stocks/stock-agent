@@ -32,6 +32,7 @@ class Rsi50Result:
     cross_count: int
     avg_p50: float
     data_insufficient: bool
+    timeframe: str = "1d"  # 계산에 쓴 봉 단위 ("1d" 일봉, "120m" 120분봉)
 
 
 def wilder_rsi_and_p50(close: pd.Series) -> tuple[pd.Series, pd.Series]:
@@ -46,16 +47,28 @@ def wilder_rsi_and_p50(close: pd.Series) -> tuple[pd.Series, pd.Series]:
     return rsi, p50
 
 
-def compute_rsi50(close: pd.Series) -> Rsi50Result:
+def compute_rsi50(close: pd.Series, timeframe: str = "1d") -> Rsi50Result:
+    """평균 구간은 봉 단위와 관계없이 최근 WINDOW(126)거래일이다.
+
+    일봉은 126봉, 분봉(120분봉 등)은 최근 126개 거래일에 속한 봉 전체로 계산하고,
+    이력 부족 판정(WINDOW + MIN_WARMUP)도 거래일 수로 한다. 상장 초기 제외 구간
+    WARMUP은 Wilder 평활이 안정되기까지의 봉 수라 봉 개수 기준 그대로 둔다.
+    """
     close = close.dropna()
-    data_insufficient = len(close) < WINDOW + MIN_WARMUP
+    if timeframe == "1d":
+        bar_days = pd.RangeIndex(len(close))
+    else:
+        bar_days = pd.Index(pd.DatetimeIndex(close.index).normalize()).factorize()[0]
+    n_days = int(bar_days.max()) + 1 if len(close) else 0
+    data_insufficient = n_days < WINDOW + MIN_WARMUP
 
     if len(close) <= WARMUP:
-        return Rsi50Result(float("nan"), 0, float("nan"), True)
+        return Rsi50Result(float("nan"), 0, float("nan"), True, timeframe)
 
     rsi, p50 = wilder_rsi_and_p50(close)
 
-    window = rsi.index[max(len(close) - WINDOW, WARMUP):]
+    window_start = int(np.argmax(np.asarray(bar_days) >= n_days - WINDOW))
+    window = rsi.index[max(window_start, WARMUP):]
     rsi_prev = rsi.shift(1)
     close_prev = close.shift(1)
 
@@ -78,6 +91,7 @@ def compute_rsi50(close: pd.Series) -> Rsi50Result:
         cross_count=len(crossed),
         avg_p50=avg_p50,
         data_insufficient=data_insufficient,
+        timeframe=timeframe,
     )
 
 

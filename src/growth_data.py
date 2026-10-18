@@ -40,6 +40,13 @@ logger = logging.getLogger(__name__)
 
 _UNIT_M = 1_000_000.0
 
+# 적정주가를 120분봉 RSI(14) 기준 RSI50 평균가(최근 126거래일)로 쓰는 종목 (2026-10-18 요청).
+# RKLB는 Growth FV(2단계) 가정값이 config에 있지만 적정주가에는 쓰지 않는다 (src/signal.py).
+RSI50_120M_SYMBOLS = {"SPCX", "RKLB"}
+# 미국 정규장 시작(09:30 ET)부터 120분 단위로 묶는다: 09:30/11:30/13:30/15:30(30분짜리) 하루 4봉
+_SESSION_OPEN_MIN = 9 * 60 + 30
+_BAR_MIN = 120
+
 
 @lru_cache(maxsize=1)
 def _risk_free_rate() -> Optional[float]:
@@ -71,6 +78,30 @@ def _full_history_close(ticker: str) -> Optional[pd.Series]:
         return close if len(close) else None
     except Exception as e:
         logger.warning("%s 전체 시세 조회 실패: %s: %s", ticker, type(e).__name__, e)
+        return None
+
+
+def resample_120m(close_60m: pd.Series) -> pd.Series:
+    """yfinance 60분봉 종가를 정규장 시작 기준 120분봉 종가로 묶는다 (yfinance는 120분봉 미지원).
+
+    pandas resample은 tz-aware 인덱스에서 서머타임 전환 시 봉 경계가 1시간 밀리므로
+    뉴욕 현지 시각으로 직접 봉 키를 만든다.
+    """
+    idx = close_60m.index
+    local = idx.tz_convert("America/New_York").tz_localize(None) if idx.tz is not None else idx
+    minutes = local.hour * 60 + local.minute - _SESSION_OPEN_MIN
+    keys = local.normalize() + pd.to_timedelta(_SESSION_OPEN_MIN + (minutes // _BAR_MIN) * _BAR_MIN, unit="min")
+    return close_60m.groupby(keys).last().dropna()
+
+
+@lru_cache(maxsize=None)
+def _history_close_120m(ticker: str) -> Optional[pd.Series]:
+    """RSI50용 120분봉 종가. yfinance 60분봉은 최근 730일까지만 제공된다."""
+    try:
+        close = price_history(ticker, period="730d", interval="60m")["Close"]
+        return resample_120m(close) if len(close) else None
+    except Exception as e:
+        logger.warning("%s 60분봉 시세 조회 실패: %s: %s", ticker, type(e).__name__, e)
         return None
 
 
@@ -239,8 +270,16 @@ class GrowthFairValueSummary:
 def item_rsi50(item: MarketItem) -> Rsi50Result:
     """종목의 RSI50 평균가(§7). 상장 이후 전체 종가로 계산해야 Wilder 평활의
     시작점 왜곡이 줄어들어 전체 이력을 쓰고, 조회에 실패하면 리포트용으로 이미
-    받아둔 item.close로 대신한다."""
-    close = _full_history_close(yahoo_ticker(item.symbol, item.market))
+    받아둔 item.close로 대신한다.
+
+    RSI50_120M_SYMBOLS 종목은 120분봉으로 계산하고, 분봉 조회에 실패하면 일봉으로 대신한다
+    (결과의 timeframe으로 어느 쪽인지 구분)."""
+    ticker = yahoo_ticker(item.symbol, item.market)
+    if item.symbol in RSI50_120M_SYMBOLS:
+        close_120m = _history_close_120m(ticker)
+        if close_120m is not None and len(close_120m):
+            return compute_rsi50(close_120m, timeframe="120m")
+    close = _full_history_close(ticker)
     if close is None:
         close = item.close
     if close is None or len(close) == 0:
