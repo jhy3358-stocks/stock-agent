@@ -1,4 +1,4 @@
-"""발송 구간(한국 시간 월 06:00 ~ 토 06:00)과 DART 값 캐시."""
+"""발송 구간(한국 시간 월 06:00 ~ 토 06:59)과 DART 값 캐시."""
 from __future__ import annotations
 
 import datetime as dt
@@ -16,7 +16,9 @@ def test_send_window_boundaries():
     assert in_send_window(_kst(21, 6, 0))        # 월 06:00
     assert in_send_window(_kst(24, 23, 0))       # 목
     assert in_send_window(_kst(26, 5, 59))       # 토 05:59
-    assert not in_send_window(_kst(26, 6, 0))    # 토 06:00
+    assert in_send_window(_kst(26, 6, 0))        # 토 06:00
+    assert in_send_window(_kst(26, 6, 59))       # 토 06:59
+    assert not in_send_window(_kst(26, 7, 0))    # 토 07:00
     assert not in_send_window(_kst(27, 12, 0))   # 일
 
 

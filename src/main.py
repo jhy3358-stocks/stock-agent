@@ -90,7 +90,7 @@ def _collect_index_news(naver_credentials: Optional[tuple[str, str]]) -> dict:
     return dedupe_news_across(pool, list(INDICES.keys()), INDEX_NEWS_LIMIT)
 
 
-# 발송 허용 구간 (한국 시간): 월요일 06:00 ~ 토요일 06:00 직전. 주말(토 06:00 ~ 월 06:00)에는
+# 발송 허용 구간 (한국 시간): 월요일 06:00 ~ 토요일 06시대(06:59)까지. 주말(토 07:00 ~ 월 06:00)에는
 # 외부 스케줄러가 실행해도 발송하지 않는다. REPORT_FORCE=true면 구간과 무관하게 발송한다
 # (워크플로 수동 실행의 force 입력).
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -103,7 +103,7 @@ def in_send_window(now: dt.datetime) -> bool:
     if weekday == 0:
         return kst.hour >= SEND_WINDOW_HOUR
     if weekday == 5:
-        return kst.hour < SEND_WINDOW_HOUR
+        return kst.hour <= SEND_WINDOW_HOUR
     return weekday < 5
 
 
@@ -112,7 +112,7 @@ def main() -> None:
 
     force = os.environ.get("REPORT_FORCE", "").lower() == "true"
     if not force and not in_send_window(dt.datetime.now(dt.timezone.utc)):
-        logger.info("발송 구간(한국 시간 월 06:00 ~ 토 06:00)이 아니라 리포트를 만들지 않고 종료합니다.")
+        logger.info("발송 구간(한국 시간 월 06:00 ~ 토 06:59)이 아니라 리포트를 만들지 않고 종료합니다.")
         return
 
     logger.info("국내 종목 데이터 수집 중...")

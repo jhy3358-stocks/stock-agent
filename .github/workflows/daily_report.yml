@@ -4,12 +4,12 @@ on:
   # GitHub의 자체 schedule(cron) 트리거는 부하가 몰리면 몇 시간씩 지연될 수 있어
   # (2026-07-07 실제로 4시간+ 지연 확인) 제거하고, 외부 스케줄러(cron-job.org)가
   # GitHub API로 workflow_dispatch를 호출하는 방식으로 대체했다.
-  # 발송은 한국 시간 월 06:00 ~ 토 06:00에만 한다(src/main.py). 주말에 직접 발송하려면
+  # 발송은 한국 시간 월 06:00 ~ 토 06:59에만 한다(src/main.py). 주말에 직접 발송하려면
   # 수동 실행에서 force를 켠다.
   workflow_dispatch:
     inputs:
       force:
-        description: "발송 구간(월 06:00 ~ 토 06:00 KST) 밖에서도 발송"
+        description: "발송 구간(월 06:00 ~ 토 06:59 KST) 밖에서도 발송"
         type: boolean
         default: false
 
