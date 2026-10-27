@@ -133,9 +133,10 @@ VALUATION = {
     # GRAV/M-GRAV에서 빼고 RSI50 평균가(추세 기준)로 표시한다. Growth FV 가정은 두지 않음.
     "MU": {"growth_rate": 173.61, "beta": 2.213},
     "SKHY": {"growth_rate": 109.12, "beta": 2.395},
-    # SPCX(스페이스X): 비상장 성격의 종목이라 Yahoo/Finviz/Seeking Alpha 어디에도
-    # EPS 5년 성장률·베타가 공시되어 있지 않아 값을 채우지 않는다.
-    # (VALUATION 미확보 -> GRAV/M-GRAV 대신 Growth FV 모듈로 라우팅됨. src/growth_data.py 참고)
+    # SPCX(스페이스X): Q3 2026 흑자 전환 후 GRAV/M-GRAV로 전환 (2026-10-27).
+    # g=SimplyWall.st 애널리스트 이익성장률 컨센서스. 상장(2026-06-12) 1년 미만이라
+    # 주간 베타(52주 필요)가 안 나와 config beta를 쓰며, growth_assumptions.yaml의 peer_beta와 같은 값.
+    "SPCX": {"growth_rate": 58.0, "beta": 1.2},
     "LLY": {"growth_rate": 30.55, "beta": 0.45},   # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     "COST": {"growth_rate": 11.03, "beta": 0.88},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     # RKLB(로켓랩): forward EPS가 소스마다 부호가 엇갈리고(Yahoo +0.046 vs
@@ -181,5 +182,7 @@ M_GRAV = {
     # --- 2026-09-25 추가 ---
     "LLY": {"target_pe": 30.0, "m_score": 86},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
     "COST": {"target_pe": 35.0, "m_score": 63},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
-    # SPCX/RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (Growth FV 모듈로 대체, src/growth_data.py 참고).
+    # --- 2026-10-27 추가 ---
+    "SPCX": {"target_pe": None, "m_score": 69},    # 기술독점 24(발사·Starlink) + 락인 15 + OPM 7(최근 4분기 0~10%, Q3 단독 19%) + 진입장벽 23. target_pe는 라이브 forward PE 사용
+    # RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (120분봉 RSI50 평균가로 대체, src/signal.py 참고).
 }

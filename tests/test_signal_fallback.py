@@ -179,6 +179,19 @@ def test_rsi50_120m_symbol_skips_growth_fv(monkeypatch):
     assert "120분봉/교차점 평균" in line
 
 
+def test_rsi50_shown_alongside_grav_for_spcx(monkeypatch):
+    # SPCX는 GRAV·M-GRAV가 있어도 RSI50 평균가를 뒤에 함께 표시한다. 다른 종목은 GRAV만.
+    _set_models(monkeypatch, grav=100.0, m_grav=105.0)
+    monkeypatch.setattr(
+        signal, "item_rsi50", lambda item: Rsi50Result(120.0, 5, 118.0, False, timeframe="120m")
+    )
+    item = _item()
+    item.symbol = "SPCX"
+    line = signal.fair_value_line(item)
+    assert line.index("적정주가(GRAV)") < line.index("적정주가(M-GRAV)") < line.index("RSI50 평균가")
+    assert "RSI50 평균가" not in signal.fair_value_line(_item())
+
+
 def _ready_setup(monkeypatch, symbol, eps, target_pe, beta):
     import src.valuation as valuation
 
@@ -192,7 +205,7 @@ def _ready_setup(monkeypatch, symbol, eps, target_pe, beta):
 
 def test_grav_readiness_line_shown_when_inputs_available(monkeypatch):
     # EPS 2 x Target P/E 100 / beta 2 = 100 -> 현재가 110의 범위 안
-    item = _ready_setup(monkeypatch, "SPCX", 2.0, 100.0, 2.0)
+    item = _ready_setup(monkeypatch, "RKLB", 2.0, 100.0, 2.0)
     line = signal.grav_readiness_line(item)
     assert line.startswith("※ GRAV·M-GRAV 전환 가능")
     assert "$100.00" in line

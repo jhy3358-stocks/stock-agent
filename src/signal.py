@@ -28,6 +28,10 @@ RSI_OVERBOUGHT = 70.0
 # 가정에 거의 전적으로 의존)는 가정 민감도가 너무 커서 RSI50 평균가로 대신한다.
 GROWTH_FV_STAGES = (1, 2)
 
+# GRAV·M-GRAV를 구해도 RSI50 평균가를 함께 표시하는 종목. SPCX는 2026-10 흑자 전환으로
+# GRAV·M-GRAV에 막 넘어와 이력이 짧으니, 이전에 쓰던 추세 기준 값도 나란히 보여준다.
+RSI50_ALONGSIDE_SYMBOLS = {"SPCX"}
+
 
 @dataclass
 class _Valuation:
@@ -127,13 +131,14 @@ def _fair_values(item: MarketItem) -> list[_Valuation]:
     """적정주가 줄과 매매 신호가 함께 쓰는 최종 적정주가 목록.
 
     GRAV·M-GRAV → Growth FV(1·2단계) → RSI50 평균가 순으로, 앞 단계가 하나도
-    없을 때만 다음 단계로 넘어간다.
+    없을 때만 다음 단계로 넘어간다. 단 RSI50_ALONGSIDE_SYMBOLS 종목은 RSI50 평균가를
+    항상 뒤에 덧붙인다.
     """
     valuations = _valuations(item)
-    if valuations:
+    if valuations and item.symbol not in RSI50_ALONGSIDE_SYMBOLS:
         return valuations
     rsi50 = safe_call(f"{item.symbol} RSI50 평균가 계산", _rsi50_valuation, item, default=None)
-    return [rsi50] if rsi50 is not None else []
+    return valuations + [rsi50] if rsi50 is not None else valuations
 
 
 def fair_value_line(item: MarketItem) -> str:
