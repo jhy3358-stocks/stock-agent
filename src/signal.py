@@ -1,4 +1,4 @@
-"""적정주가(GRAV 모델 + M-GRAV 모델 + 성장주 Growth FV, 최후 폴백으로 RSI50 평균가)
+"""적정주가(GRAV 모델 + M-GRAV·M-GRAV(FCI) 모델 + 성장주 Growth FV, 최후 폴백으로 RSI50 평균가)
 표시와 RSI 결합 매수/매도 참고 신호."""
 from __future__ import annotations
 
@@ -13,7 +13,14 @@ from src.growth_data import RSI50_120M_SYMBOLS, growth_fair_value, item_rsi50, r
 from src.indicators import gap_pct, rsi
 from src.models import MarketItem
 from src.rsi50 import rsi50_fair_value
-from src.valuation import fair_value_inputs, grav_readiness, is_sane, m_grav_fair_value, target_price
+from src.valuation import (
+    fair_value_inputs,
+    grav_readiness,
+    is_sane,
+    m_grav_fair_value,
+    m_grav_fci_fair_value,
+    target_price,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +87,7 @@ def _compute_valuations(item: MarketItem) -> list[_Valuation]:
     for label, value in (
         ("GRAV", target_price(**inputs) if inputs else None),
         ("M-GRAV", m_grav_fair_value(item)),
+        ("M-GRAV(FCI)", m_grav_fci_fair_value(item)),
     ):
         if value and _sane(item, label, value):
             result.append(_Valuation(label, value, gap_pct(item.current_price, value), label))
@@ -164,7 +172,7 @@ def grav_readiness_line(item: MarketItem) -> Optional[str]:
     return (
         f"※ GRAV·M-GRAV 전환 가능: EPS {format_price(ready.eps, item.unit)}, "
         f"Target P/E {ready.target_pe:.1f}, 추정 GRAV {format_price(ready.estimate, item.unit)} "
-        f"(g 0% 가정·beta {ready.beta:.2f}) → config.py VALUATION(g·beta)·M_GRAV(m_score) 입력 필요"
+        f"(g 0% 가정·beta {ready.beta:.2f}) → config.py VALUATION(g·beta)·M_GRAV(m_score·m_score_fci) 입력 필요"
     )
 
 

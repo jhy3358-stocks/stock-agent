@@ -160,29 +160,39 @@ VALUATION = {
 #     눌러줘 해자가 강할수록(m_score 높을수록) 베타(변동성) 페널티를 완화한다.
 #   정성적 판단 비중이 커서 g/beta보다도 더 자주 재검토가 필요하다.
 #   2026-09-26 4개 항목별로 재산정했다. OPM 체력은 최근 4분기 영업이익률 구간으로
-#   채점한다 (50%+ 25 / 40~50% 22 / 30~40% 19 / 20~30% 16 / 10~20% 12 / 0~10% 7 / 적자 0). OPM 체력은 최근 4분기 영업이익률 구간으로
 #   채점한다 (50%+ 25 / 40~50% 22 / 30~40% 19 / 20~30% 16 / 10~20% 12 / 0~10% 7 / 적자 0).
+#   m_score_fci: M-GRAV(FCI)용 해자 점수. 산식은 M-GRAV와 같고 m_score만 이 값을 쓴다.
+#     위 4개 항목에 현금흐름 체질을 더한 5개 항목, 각 20점 배점 (2026-10-31 산정).
+#     1) 기술독점 & 점유율: 글로벌 1위 독점 20 / 과점 2~3위 15 / 범용 경쟁 10 이하
+#     2) 전환비용 & 락인: 독자 생태계 20 / Custom 칩 락인 15 / 범용 규격 10 이하
+#     3) OPM 체력(최근 4분기): 40%+ 20 / 25~39% 15 / 15~24% 10 / 15% 미만 5 / 적자 0
+#     4) 진입장벽: 수십조 단위 CAPEX & 특허 20 / 첨단 패키징 15 / 범용 10
+#     5) 현금흐름 체질(최근 4분기, FCF = 영업현금흐름 - Capex): FCF 마진과 FCF/순이익 중
+#        높은 등급. 마진 25%+ 또는 1.1+ 20 / 15~24% 또는 0.9~1.09 15 / 5~14% 또는
+#        0.7~0.89 10 / 그 미만 5 / FCF 음수 3(순이익 흑자)·0(순이익 적자)
+#     1)·2)·4)는 등급 사이 점수도 쓴다. 종목별 항목 점수와 근거는 m_score_by_stock.csv 참고.
+#     기존 M-GRAV와 나란히 보며 비교하는 단계라, 한쪽으로 정리할 때까지 두 점수를 함께 관리한다.
 M_GRAV = {
     # --- 국내 ---
-    "005930": {"target_pe": None, "m_score": 69},  # 삼성전자: 메모리+파운드리+세트 다각화, 부문별 이익률 편차 커 체력/락인 보통. target_pe는 라이브 forward PE 사용
-    "000660": {"target_pe": None, "m_score": 87},  # SK하이닉스: HBM 기술 선두, 공급 qualification 장벽, 사이클 고점 OPM 우수. target_pe는 라이브 forward PE 사용
-    "005380": {"target_pe": 6.0, "m_score": 39},   # 현대차: 자본집약 완성차, 브랜드 전환비용 낮고 이익률 얇음
+    "005930": {"target_pe": None, "m_score": 69, "m_score_fci": 79},  # 삼성전자: 메모리+파운드리+세트 다각화, 부문별 이익률 편차 커 체력/락인 보통. target_pe는 라이브 forward PE 사용
+    "000660": {"target_pe": None, "m_score": 87, "m_score_fci": 93},  # SK하이닉스: HBM 기술 선두, 공급 qualification 장벽, 사이클 고점 OPM 우수. target_pe는 라이브 forward PE 사용
+    "005380": {"target_pe": 6.0, "m_score": 39, "m_score_fci": 34},   # 현대차: 자본집약 완성차, 브랜드 전환비용 낮고 이익률 얇음
     # --- 미국 ---
-    "AAPL": {"target_pe": 27.0, "m_score": 81},    # iOS/서비스 생태계 락인, 하드웨어 마진은 준수하나 최상위는 아님
-    "AMZN": {"target_pe": 32.0, "m_score": 71},    # AWS 락인/규모의 경제 강하지만 커머스 부문 이익률이 전체를 희석
-    "AVGO": {"target_pe": 28.0, "m_score": 85},    # 통신칩 IP독점 + VMware 인수로 소프트웨어 락인 추가, OPM 최상위권
-    "GOOGL": {"target_pe": 22.0, "m_score": 76},   # 검색 독점적 지위, 광고주 전환비용은 낮은 편
-    "META": {"target_pe": 23.0, "m_score": 73},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
-    "MSFT": {"target_pe": 30.0, "m_score": 88},    # Office/Windows/Azure 전방위 엔터프라이즈 락인, OPM 최상위권
-    "NVDA": {"target_pe": 35.0, "m_score": 94},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
+    "AAPL": {"target_pe": 27.0, "m_score": 81, "m_score_fci": 86},    # iOS/서비스 생태계 락인, 하드웨어 마진은 준수하나 최상위는 아님
+    "AMZN": {"target_pe": 32.0, "m_score": 71, "m_score_fci": 59},    # AWS 락인/규모의 경제 강하지만 커머스 부문 이익률이 전체를 희석
+    "AVGO": {"target_pe": 28.0, "m_score": 85, "m_score_fci": 92},    # 통신칩 IP독점 + VMware 인수로 소프트웨어 락인 추가, OPM 최상위권
+    "GOOGL": {"target_pe": 22.0, "m_score": 76, "m_score_fci": 71},   # 검색 독점적 지위, 광고주 전환비용은 낮은 편
+    "META": {"target_pe": 23.0, "m_score": 73, "m_score_fci": 72},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
+    "MSFT": {"target_pe": 30.0, "m_score": 88, "m_score_fci": 90},    # Office/Windows/Azure 전방위 엔터프라이즈 락인, OPM 최상위권
+    "NVDA": {"target_pe": 35.0, "m_score": 94, "m_score_fci": 98},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
     # TSLA: VALUATION에서 제외 (위 주석 참고). 이전 m_score 45.
-    "MU": {"target_pe": 12.0, "m_score": 79},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
-    "SKHY": {"target_pe": 12.0, "m_score": 87},    # SK하이닉스(ADR), 000660과 동일 기업
+    "MU": {"target_pe": 12.0, "m_score": 79, "m_score_fci": 87},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
+    "SKHY": {"target_pe": 12.0, "m_score": 87, "m_score_fci": 93},    # SK하이닉스(ADR), 000660과 동일 기업
 
     # --- 2026-09-25 추가 ---
-    "LLY": {"target_pe": 30.0, "m_score": 86},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
-    "COST": {"target_pe": 35.0, "m_score": 63},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
+    "LLY": {"target_pe": 30.0, "m_score": 86, "m_score_fci": 83},     # GLP-1(마운자로/젭바운드) 특허 독점 프랜차이즈, 압도적 마진(EBITDA 52%)·진입장벽. beta<1이라 M-GRAV 공식상 GRAV보다 더 부풀 수 있음(아래 요약 참고)
+    "COST": {"target_pe": 35.0, "m_score": 63, "m_score_fci": 66},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
     # --- 2026-10-27 추가 ---
-    "SPCX": {"target_pe": None, "m_score": 69},    # 기술독점 24(발사·Starlink) + 락인 15 + OPM 7(최근 4분기 0~10%, Q3 단독 19%) + 진입장벽 23. target_pe는 라이브 forward PE 사용
+    "SPCX": {"target_pe": None, "m_score": 69, "m_score_fci": 56},    # 기술독점 24(발사·Starlink) + 락인 15 + OPM 7(최근 4분기 0~10%, Q3 단독 19%) + 진입장벽 23. target_pe는 라이브 forward PE 사용
     # RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (120분봉 RSI50 평균가로 대체, src/signal.py 참고).
 }

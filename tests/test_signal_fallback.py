@@ -4,6 +4,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
 import src.signal as signal
 from src.models import MarketItem
@@ -20,6 +21,7 @@ def _item() -> MarketItem:
 def _no_grav(monkeypatch):
     monkeypatch.setattr(signal, "fair_value_inputs", lambda item: None)
     monkeypatch.setattr(signal, "m_grav_fair_value", lambda item: None)
+    monkeypatch.setattr(signal, "m_grav_fci_fair_value", lambda item: None)
 
 
 def test_rsi50_used_when_all_models_fail(monkeypatch):
@@ -65,12 +67,13 @@ def test_no_data_message_when_rsi50_also_fails(monkeypatch):
 #   매수: RSI < 30 & 괴리율 <= -10%, 매도: RSI > 70 & 괴리율 >= +10%
 # ---------------------------------------------------------------------------
 
-def _set_models(monkeypatch, grav=None, m_grav=None, growth=None, rsi_value=50.0):
+def _set_models(monkeypatch, grav=None, m_grav=None, growth=None, rsi_value=50.0, m_grav_fci=None):
     monkeypatch.setattr(
         signal, "fair_value_inputs",
         lambda item: None if grav is None else {"eps": grav, "target_pe": 1.0, "growth_rate": 0.0, "beta": 1.0},
     )
     monkeypatch.setattr(signal, "m_grav_fair_value", lambda item: m_grav)
+    monkeypatch.setattr(signal, "m_grav_fci_fair_value", lambda item: m_grav_fci)
     monkeypatch.setattr(signal, "growth_fair_value", lambda item: growth)
     monkeypatch.setattr(signal, "rsi", lambda close, period: rsi_value)
 
@@ -143,6 +146,36 @@ def test_out_of_band_grav_dropped_keeps_m_grav(monkeypatch):
     line = signal.fair_value_line(_item())
     assert "GRAV)" not in line.replace("M-GRAV)", "")
     assert "적정주가(M-GRAV) $125.00" in line
+
+
+def test_m_grav_fci_shown_after_m_grav_and_used_in_signal(monkeypatch):
+    # 현재가 110: GRAV 115 -> -4.3%, M-GRAV 120 -> -8.3%(미충족), M-GRAV(FCI) 125 -> -12.0%(충족)
+    _set_models(monkeypatch, grav=115.0, m_grav=120.0, m_grav_fci=125.0, rsi_value=25.0)
+    line = signal.fair_value_line(_item())
+    assert line.index("적정주가(GRAV)") < line.index("적정주가(M-GRAV)") < line.index("적정주가(M-GRAV(FCI)) $125.00")
+    assert signal.trading_signal(_item()) == "매수 관점 우세 (RSI 25.0 · M-GRAV(FCI) 괴리율 -12.0%)"
+
+
+def test_m_grav_fci_uses_m_score_fci(monkeypatch):
+    import src.valuation as valuation
+
+    monkeypatch.setattr(valuation, "VALUATION", {"TEST": {"growth_rate": 10.0, "beta": 1.0}})
+    monkeypatch.setattr(valuation, "M_GRAV", {"TEST": {"target_pe": None, "m_score": 0, "m_score_fci": 100}})
+    monkeypatch.setattr(valuation, "_eps", lambda item: 5.0)
+    monkeypatch.setattr(valuation, "_target_pe", lambda item: 20.0)
+    monkeypatch.setattr(valuation, "_beta", lambda item: 4.0)
+    # 5 x 20 x 1.1 = 110 -> M-GRAV: / 4^(1/1) = 27.5, M-GRAV(FCI): / 4^(1/2) = 55.0
+    assert valuation.m_grav_fair_value(_item()) == pytest.approx(27.5)
+    assert valuation.m_grav_fci_fair_value(_item()) == pytest.approx(55.0)
+
+
+def test_m_grav_fci_none_without_m_score_fci(monkeypatch):
+    import src.valuation as valuation
+
+    monkeypatch.setattr(valuation, "VALUATION", {"TEST": {"growth_rate": 10.0, "beta": 1.0}})
+    monkeypatch.setattr(valuation, "M_GRAV", {"TEST": {"target_pe": None, "m_score": 50}})
+    monkeypatch.setattr(valuation, "_eps", lambda item: (_ for _ in ()).throw(AssertionError("호출되면 안 됨")))
+    assert valuation.m_grav_fci_fair_value(_item()) is None
 
 
 def test_out_of_band_growth_fv_falls_back_to_rsi50(monkeypatch):

@@ -282,9 +282,18 @@ def m_grav_fair_value(item: MarketItem) -> Optional[float]:
     config.VALUATION 값을 쓴다.
     필요한 값을 하나라도 못 구하면 None을 반환한다.
     """
+    return _m_grav(item, "m_score")
+
+
+def m_grav_fci_fair_value(item: MarketItem) -> Optional[float]:
+    """M-GRAV(FCI): M-GRAV와 같은 산식에 현금흐름 체질을 더한 5항목 해자 점수(m_score_fci)를 쓴다."""
+    return _m_grav(item, "m_score_fci")
+
+
+def _m_grav(item: MarketItem, score_key: str) -> Optional[float]:
     valuation = VALUATION.get(item.symbol)
     m_grav = M_GRAV.get(item.symbol)
-    if valuation is None or m_grav is None:
+    if valuation is None or m_grav is None or m_grav.get(score_key) is None:
         return None
 
     eps = _eps(item)
@@ -297,5 +306,5 @@ def m_grav_fair_value(item: MarketItem) -> Optional[float]:
 
     beta = _beta(item)
     g = valuation["growth_rate"]
-    m_factor = 1 + m_grav["m_score"] / 100
+    m_factor = 1 + m_grav[score_key] / 100
     return eps * target_pe * (1 + g / 100) / (beta ** (1 / m_factor))
