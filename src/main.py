@@ -23,6 +23,7 @@ from src.dart_client import get_recent_disclosures_for_stocks
 from src.html_report import build_html_report
 from src.kakao_client import send_summary
 from src.kr_stocks import fetch_all_kr_stocks
+from src.macro_indicators import fetch_macro_indicators
 from src.naver_news_client import get_recent_news_for_stocks as get_naver_news_for_stocks
 from src.news_client import (
     dedupe_news_across,
@@ -122,6 +123,9 @@ def main() -> None:
     us_stocks = fetch_all_us_stocks()
     indices = fetch_indices()
 
+    logger.info("투자지표(물가/국채 금리/달러/유가) 수집 중...")
+    macro = fetch_macro_indicators()
+
     logger.info("적정주가 입력값(Yahoo/Finviz) 조회 중...")
     prefetch_valuation_inputs(kr_stocks + us_stocks)
 
@@ -171,7 +175,7 @@ def main() -> None:
     (DOCS_DIR / "index.html").write_text(
         build_html_report(
             kr_stocks, us_stocks, indices, kr_disclosures, us_filings, us_news, kr_news,
-            index_news,
+            index_news, macro,
         ),
         encoding="utf-8",
     )

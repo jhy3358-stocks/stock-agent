@@ -7,6 +7,12 @@ from typing import Callable, Dict, List
 
 from config import RSI_PERIOD
 from src.formatting import format_price, rsi_text, volume_text
+from src.macro_indicators import (
+    ClaimsIndicator,
+    InflationIndicator,
+    MacroIndicators,
+    RateIndicator,
+)
 from src.models import MarketItem
 from src.signal import fair_value_line, grav_readiness_line, trading_signal
 
@@ -72,6 +78,138 @@ def _section(
     </section>"""
 
 
+def _signed(value, suffix: str) -> str:
+    return "-" if value is None else f"{value:+.1f}{suffix}"
+
+
+def _revision_text(first, revised) -> str:
+    """속보치 -> 수정치. 반올림 후 같거나 속보치를 모르면 수정치 하나만."""
+    if first is None or revised is None or f"{first:+.1f}" == f"{revised:+.1f}":
+        return _signed(revised, "%")
+    return f"{_signed(first, '%')} → {_signed(revised, '%')}"
+
+
+def _inflation_preview_card(ind: InflationIndicator) -> str:
+    """발표일 발표 전: 이번 발표 예상치와 직전 발표치."""
+    up = ind.upcoming
+    month, last = f"{up.month.month}월", f"{ind.month.month}월"
+    body = ""
+    for line in ind.lines:
+        body += (
+            f"<tr><th>{line.label}<br>전월비</th>"
+            f"<td>{_signed(up.consensus_mom.get(line.label), '%')}</td>"
+            f"<td>{_signed(line.mom, '%')}</td></tr>"
+            f"<tr><th>{line.label}<br>전년비</th><td>-</td><td>{_signed(line.yoy, '%')}</td></tr>"
+        )
+    return f"""
+    <div class="card">
+      <div class="card-title">미국 {ind.name} <span class="symbol">({up.month.year}년 {month}분 · {_kst(up.release)} 발표 예정)</span></div>
+      <div class="table-wrap"><table class="macro">
+        <tr><th></th><th>{month}<br>예상치</th><th>{last}<br>발표치</th></tr>
+        {body}
+      </table></div>
+    </div>"""
+
+
+def _inflation_card(ind: InflationIndicator) -> str:
+    if ind.phase == "preview" and ind.upcoming:
+        return _inflation_preview_card(ind)
+    month, prev = f"{ind.month.month}월", f"{ind.prev_month.month}월"
+    body = ""
+    for line in ind.lines:
+        body += (
+            f"<tr><th>{line.label}<br>전월비</th><td>{_signed(line.consensus_mom, '%')}</td>"
+            f"<td>{_signed(line.mom, '%')}</td>"
+            f"<td>{_revision_text(line.prev_first_mom, line.prev_mom)}</td></tr>"
+            f"<tr><th>{line.label}<br>전년비</th><td>-</td>"
+            f"<td>{_signed(line.yoy, '%')}</td>"
+            f"<td>{_revision_text(line.prev_first_yoy, line.prev_yoy)}</td></tr>"
+        )
+    released = f" · {_kst(ind.release)} 발표" if ind.release else ""
+    notes = ""
+    if any(line.yoy is None for line in ind.lines):
+        # 예: 2025-10 CPI는 셧다운으로 미발표라 2026-10 전년비를 계산할 수 없다
+        notes += '<div class="row">전년비 -: 전년 동월 지수 미발표</div>'
+    return f"""
+    <div class="card wide">
+      <div class="card-title">미국 {ind.name} <span class="symbol">({ind.month.year}년 {month}분{released})</span></div>
+      <div class="table-wrap"><table class="macro">
+        <tr><th></th><th>예상치</th><th>{month}<br>속보치</th><th>{prev} 속보치<br>→ 수정치</th></tr>
+        {body}
+      </table></div>
+      <div class="row">화살표가 없으면 수정 없음</div>{notes}
+    </div>"""
+
+
+def _count(value) -> str:
+    return "-" if value is None else f"{value:,.0f}건"
+
+
+def _claims_card(ind: ClaimsIndicator) -> str:
+    title = '<div class="card-title">미국 신규 실업수당 청구 <span class="symbol">(ICSA)</span></div>'
+    if ind.phase == "preview":
+        return f"""
+    <div class="card">
+      {title}
+      <div class="price">예상 {_count(ind.next_consensus)}</div>
+      <div class="row">{ind.next_week_end:%m/%d} 마감 주간 · {_kst(ind.next_release)} 발표 예정</div>
+      <div class="row">직전 {_count(ind.value)} ({ind.week_end:%m/%d} 마감 주간)</div>
+    </div>"""
+    direction = "up" if ind.change >= 0 else "down"
+    return f"""
+    <div class="card {direction}">
+      {title}
+      <div class="price">{ind.value:,.0f}건 <span class="change">({ind.change:+,.0f}건, {ind.change_pct:+.2f}%)</span></div>
+      <div class="row">예상 {_count(ind.consensus)}, 전주 {ind.prev:,.0f}건</div>
+      <div class="row">{ind.week_end:%m/%d} 마감 주간 · {_kst(ind.release)} 발표</div>
+    </div>"""
+
+
+KST = dt.timezone(dt.timedelta(hours=9))
+
+
+def _kst(moment: dt.datetime) -> str:
+    return f"{moment.astimezone(KST):%m/%d %H:%M} KST"
+
+
+def _as_of_text(as_of) -> str:
+    """실시간 값은 한국 시간 시각, 종가 대체값은 날짜만."""
+    if isinstance(as_of, dt.datetime):
+        return f"{as_of.astimezone(KST):%m/%d %H:%M} KST 기준"
+    return f"{as_of:%m/%d} 종가 기준"
+
+
+def _rate_card(ind: RateIndicator) -> str:
+    direction = "up" if ind.value >= ind.prev else "down"
+    if ind.unit == "%":
+        value = f"{ind.value:.2f}%"
+        change = f"{ind.change_bp:+.0f}bp, {ind.change_pct:+.2f}%"
+    else:
+        value = format_price(ind.value, ind.unit)
+        change = f"{ind.change_pct:+.2f}%"
+    return f"""
+    <div class="card {direction}">
+      <div class="card-title">{ind.name} <span class="symbol">({html.escape(ind.symbol)})</span></div>
+      <div class="price">{value} <span class="change">({change})</span></div>
+      <div class="row">{_as_of_text(ind.as_of)}, 전일 종가 {ind.prev:.2f}</div>
+    </div>"""
+
+
+def _macro_section(macro: MacroIndicators) -> str:
+    if not macro or not (macro.inflation or macro.rates or macro.claims):
+        return ""
+    cards = "\n".join(
+        [_inflation_card(i) for i in macro.inflation]
+        + ([_claims_card(macro.claims)] if macro.claims else [])
+        + [_rate_card(r) for r in macro.rates]
+    )
+    return f"""
+    <section>
+      <h2>투자지표</h2>
+      <div class="grid">{cards}</div>
+    </section>"""
+
+
 def build_html_report(
     kr_stocks: List[MarketItem],
     us_stocks: List[MarketItem],
@@ -81,6 +219,7 @@ def build_html_report(
     us_news: DisclosureMap = None,
     kr_news: DisclosureMap = None,
     index_news: DisclosureMap = None,
+    macro: MacroIndicators = None,
 ) -> str:
     date_str = dt.date.today().strftime("%Y-%m-%d")
     kr_disclosures = kr_disclosures or {}
@@ -91,6 +230,7 @@ def build_html_report(
     sections = "\n".join(
         [
             _section("주요 지수", indices, {}, index_news),
+            _macro_section(macro),
             _section("미국 종목", us_stocks, us_filings, us_news),
             _section("국내 종목", kr_stocks, kr_disclosures, kr_news),
         ]
@@ -119,7 +259,7 @@ def build_html_report(
   .updated {{ color: var(--muted); font-size: .85rem; margin-bottom: 24px; }}
   h2 {{ font-size: 1.05rem; margin: 28px 0 12px; }}
   .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }}
-  .card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }}
+  .card {{ min-width: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }}
   .card-title {{ font-weight: 600; margin-bottom: 6px; }}
   .symbol {{ color: var(--muted); font-weight: 400; font-size: .85rem; }}
   .price {{ font-size: 1.1rem; margin-bottom: 8px; }}
@@ -131,6 +271,12 @@ def build_html_report(
   .disclosures ul {{ margin: 0; padding-left: 18px; font-size: .82rem; }}
   .disclosures li {{ margin-top: 2px; }}
   .disclosures a {{ color: inherit; }}
+  @media (min-width: 520px) {{ .card.wide {{ grid-column: span 2; }} }}
+  table.macro {{ width: 100%; border-collapse: collapse; font-size: .8rem; margin-top: 6px; }}
+  table.macro th, table.macro td {{ padding: 3px 4px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }}
+  table.macro tr:first-child th {{ border-top: none; color: var(--muted); font-weight: 500; white-space: normal; vertical-align: bottom; }}
+  .table-wrap {{ overflow-x: auto; }}
+  table.macro th:first-child {{ text-align: left; font-weight: 500; }}
 </style>
 </head>
 <body>
