@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>주식 리포트 2026-11-13</title>
+<title>주식 리포트 2026-11-14</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -22,7 +22,7 @@
   .updated { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
   h2 { font-size: 1.05rem; margin: 28px 0 12px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .card { min-width: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
   .card-title { font-weight: 600; margin-bottom: 6px; }
   .symbol { color: var(--muted); font-weight: 400; font-size: .85rem; }
   .price { font-size: 1.1rem; margin-bottom: 8px; }
@@ -34,26 +34,32 @@
   .disclosures ul { margin: 0; padding-left: 18px; font-size: .82rem; }
   .disclosures li { margin-top: 2px; }
   .disclosures a { color: inherit; }
+  @media (min-width: 520px) { .card.wide { grid-column: span 2; } }
+  table.macro { width: 100%; border-collapse: collapse; font-size: .8rem; margin-top: 6px; }
+  table.macro th, table.macro td { padding: 3px 4px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }
+  table.macro tr:first-child th { border-top: none; color: var(--muted); font-weight: 500; white-space: normal; vertical-align: bottom; }
+  .table-wrap { overflow-x: auto; }
+  table.macro th:first-child { text-align: left; font-weight: 500; }
 </style>
 </head>
 <body>
   <h1>주식 리포트</h1>
-  <div class="updated">2026-11-13 기준</div>
+  <div class="updated">2026-11-14 기준</div>
   
     <section>
       <h2>주요 지수</h2>
       <div class="grid">
     <div class="card down">
       <div class="card-title">S&P500 <span class="symbol">(^GSPC)</span></div>
-      <div class="price">7,561.98pt <span class="change">(-0.40%)</span></div>
+      <div class="price">7,561.67pt <span class="change">(-0.40%)</span></div>
       <div class="row">RSI(14) 46.8</div>
-      <div class="row">거래량 2,600,627,000 (전일대비 -44.6%)</div>
+      <div class="row">거래량 4,372,990,000 (전일대비 -6.8%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.fool.com/coverage/market-movers/2026/11/13/why-digital-turbine-stock-plunged-this-week/" target="_blank" rel="noopener">[Yahoo Finance] Why Digital Turbine Stock Plunged This Week</a></li>
-<li><a href="https://www.trefis.com/stock/hims/articles/624992/should-hims-hers-stocks-drop-after-earnings-worry-you/2026-11-13" target="_blank" rel="noopener">[Yahoo Finance] Should Hims &amp; Hers Stock&#x27;s Drop After Earnings Worry You?</a></li></ul>
+        <ul><li><a href="https://finance.yahoo.com/technology/article/nvidia-and-jensen-huang-fallout-heres-everything-we-know-after-a-momentous-week-110000323.html" target="_blank" rel="noopener">[Yahoo Finance] Nvidia and Jensen Huang fallout: Here&#x27;s everything we know after a momentous week</a></li>
+<li><a href="https://247wallst.com/investing/2026/11/14/fedex-was-down-to-its-last-5000-when-its-founder-a-marine-who-served-two-tours-in-vietnam-flew-to-las-vegas-and-sat-down-at-a-blackjack-table-he-came-back-with-27000-and-the-planes-kept-flying/" target="_blank" rel="noopener">[Yahoo Finance] FedEx Was Down to Its Last $5,000 When Its Founder, a Marine Who Served Two Tours in Vietnam, Flew to Las Vegas and Sat Down at a Blackjack Table. He Came Back With $27,000, and the Planes Kept Flying</a></li></ul>
       </div>
     </div>
 
@@ -61,37 +67,90 @@
       <div class="card-title">나스닥 <span class="symbol">(^IXIC)</span></div>
       <div class="price">25,136.27pt <span class="change">(-0.91%)</span></div>
       <div class="row">RSI(14) 42.4</div>
-      <div class="row">거래량 6,712,692,000 (전일대비 -35.1%)</div>
+      <div class="row">거래량 8,691,350,000 (전일대비 -15.9%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.investors.com/market-trend/stock-market-today/dow-jones-sp500-nasdaq-ppi-inflation-data-cerebras-earnings/?src=A00220&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] Stock Market Today: Indexes Pare Losses; S&amp;P&#x27;s Worst Performer Sells Chips, And It&#x27;s Not Nvidia (Live Coverage)</a></li>
-<li><a href="https://finance.yahoo.com/technology/ai/articles/anthropic-dario-amodei-not-super-194126558.html" target="_blank" rel="noopener">[Yahoo Finance] Anthropic&#x27;s Dario Amodei &#x27;not super fussed&#x27; about market turmoil</a></li></ul>
+        <ul><li><a href="https://www.fool.com/investing/2026/11/14/prediction-nov-18-will-be-a-massive-day-for-the-stock-market/" target="_blank" rel="noopener">[Yahoo Finance] Prediction: Nov. 18 Will Be a Massive Day for the Stock Market</a></li>
+<li><a href="https://www.fool.com/investing/2026/11/14/new-inflation-data-offers-terrible-news-donald-trump-economy-and-ai-driven-bull-market/" target="_blank" rel="noopener">[Yahoo Finance] New Inflation Data Offers Terrible News for President Donald Trump&#x27;s Economy and the AI-Driven Bull Market</a></li></ul>
       </div>
     </div>
 
     <div class="card down">
       <div class="card-title">코스피 <span class="symbol">(^KS11)</span></div>
-      <div class="price">5,342.73pt <span class="change">(-0.61%)</span></div>
-      <div class="row">RSI(14) 39.9</div>
-      <div class="row">거래량 244,800 (전일대비 +4.3%)</div>
+      <div class="price">5,290.53pt <span class="change">(-0.98%)</span></div>
+      <div class="row">RSI(14) 38.9</div>
+      <div class="row">거래량 247,800 (전일대비 +1.2%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.geconomy.co.kr/news/article.html?no=325651" target="_blank" rel="noopener">[네이버 뉴스] 5500선 뚫고도 5290선 추락…코스피, 외국인 매도에 245포인트 출렁</a></li>
-<li><a href="https://www.pointdaily.co.kr/news/articleView.html?idxno=325922" target="_blank" rel="noopener">[네이버 뉴스] [증시 UP&amp;DOWN] 다음주 코스피, 바이오·로봇·부품주 &#x27;뜨고&#x27; 실적부진주...</a></li></ul>
+        <ul><li><a href="https://news.tf.co.kr/read/ptoday/2388833.htm" target="_blank" rel="noopener">[네이버 뉴스] 與 &quot;국힘, 코리아 디스카운트 그 자체…尹정부 때 코스피 2000대&quot;</a></li>
+<li><a href="https://daily.hankooki.com/news/articleView.html?idxno=1425040" target="_blank" rel="noopener">[네이버 뉴스] 급락 딛고 반등한 코스피…다음주 &#x27;엔비디아·연준&#x27; 변수 주목</a></li></ul>
       </div>
     </div>
 
-    <div class="card down">
+    <div class="card up">
       <div class="card-title">코스닥 <span class="symbol">(^KQ11)</span></div>
-      <div class="price">696.53pt <span class="change">(-1.22%)</span></div>
-      <div class="row">RSI(14) 41.8</div>
-      <div class="row">거래량 466,000 (전일대비 +13.1%)</div>
+      <div class="price">699.66pt <span class="change">(+0.45%)</span></div>
+      <div class="row">RSI(14) 42.4</div>
+      <div class="row">거래량 455,500 (전일대비 -2.3%)</div>
       
       
+      <div class="disclosures">
+        <div class="disclosures-title">관련 뉴스</div>
+        <ul><li><a href="https://www.the-today.com/news/articleView.html?idxno=93559" target="_blank" rel="noopener">[네이버 뉴스] [NZSI INDEX] 2026년 11월 12일… 코스피 -0.61%·코스닥 -1.22% 하락… NZ...</a></li></ul>
+      </div>
+    </div></div>
+    </section>
+
+    <section>
+      <h2>투자지표</h2>
+      <div class="grid">
+    <div class="card wide">
+      <div class="card-title">미국 PPI <span class="symbol">(2026년 10월분 · 11/13 22:30 KST 발표)</span></div>
+      <div class="table-wrap"><table class="macro">
+        <tr><th></th><th>예상치</th><th>10월<br>속보치</th><th>9월 속보치<br>→ 수정치</th></tr>
+        <tr><th>헤드라인<br>전월비</th><td>+0.4%</td><td>+0.3%</td><td>+1.3% → +1.4%</td></tr><tr><th>헤드라인<br>전년비</th><td>-</td><td>+6.5%</td><td>+6.3%</td></tr><tr><th>근원<br>전월비</th><td>+0.3%</td><td>+0.3%</td><td>+0.7% → +0.8%</td></tr><tr><th>근원<br>전년비</th><td>-</td><td>+5.0%</td><td>+5.0%</td></tr>
+      </table></div>
+      <div class="row">화살표가 없으면 수정 없음</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">미국채 2년 <span class="symbol">(2 Yr)</span></div>
+      <div class="price">4.85% <span class="change">(-1bp, -0.25%)</span></div>
+      <div class="row">11/14 07:05 KST 기준, 전일 종가 4.86</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">미국채 10년 <span class="symbol">(10 Yr)</span></div>
+      <div class="price">5.14% <span class="change">(+4bp, +0.71%)</span></div>
+      <div class="row">11/14 07:03 KST 기준, 전일 종가 5.10</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">미국채 30년 <span class="symbol">(30 Yr)</span></div>
+      <div class="price">5.47% <span class="change">(+4bp, +0.74%)</span></div>
+      <div class="row">11/14 07:05 KST 기준, 전일 종가 5.43</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">달러 인덱스 <span class="symbol">(DX-Y.NYB)</span></div>
+      <div class="price">103.41pt <span class="change">(+0.23%)</span></div>
+      <div class="row">11/14 06:55 KST 기준, 전일 종가 103.17</div>
+    </div>
+
+    <div class="card down">
+      <div class="card-title">WTI 유가 <span class="symbol">(CL=F)</span></div>
+      <div class="price">$88.56 <span class="change">(-0.20%)</span></div>
+      <div class="row">11/14 07:00 KST 기준, 전일 종가 88.74</div>
+    </div>
+
+    <div class="card up">
+      <div class="card-title">브렌트유 <span class="symbol">(BZ=F)</span></div>
+      <div class="price">$96.08 <span class="change">(+0.27%)</span></div>
+      <div class="row">11/14 06:55 KST 기준, 전일 종가 95.82</div>
     </div></div>
     </section>
 
@@ -102,14 +161,14 @@
       <div class="card-title">애플 <span class="symbol">(AAPL)</span></div>
       <div class="price">$356.27 <span class="change">(+0.39%)</span></div>
       <div class="row">RSI(14) 60.9</div>
-      <div class="row">거래량 33,922,177 (전일대비 +6.4%)</div>
-      <div class="row">적정주가(GRAV) $284.74 (괴리율 +25.1%), 적정주가(M-GRAV) $289.83 (괴리율 +22.9%), 적정주가(M-GRAV(FCI)) $290.00 (괴리율 +22.9%)</div>
+      <div class="row">거래량 39,985,300 (전일대비 +25.4%)</div>
+      <div class="row">적정주가(GRAV) $284.03 (괴리율 +25.4%), 적정주가(M-GRAV) $289.11 (괴리율 +23.2%), 적정주가(M-GRAV(FCI)) $289.28 (괴리율 +23.2%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/inside-jim-cramer-charitable-trust-203302856.html" target="_blank" rel="noopener">[Yahoo Finance] Inside Jim Cramer’s Charitable Trust: 5 Stocks He Actually Owns</a></li>
-<li><a href="https://finance.yahoo.com/technology/articles/meta-tests-prediction-market-app-203017664.html" target="_blank" rel="noopener">[Yahoo Finance] Meta tests prediction-market app for employees, WSJ reports</a></li></ul>
+        <ul><li><a href="https://www.wsj.com/tech/in-jensen-huangs-ouster-tech-billionaires-see-a-mistakeand-a-lesson-2bea613c?siteid=yhoof2&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] In Jensen Huang’s Ouster, Tech Billionaires See a Mistake—and a Lesson</a></li>
+<li><a href="https://www.fool.com/investing/2026/11/13/is-apple-stock-a-buy-right-now/" target="_blank" rel="noopener">[Yahoo Finance] Is Apple Stock a Buy Right Now?</a></li></ul>
       </div>
     </div>
 
@@ -117,8 +176,8 @@
       <div class="card-title">아마존닷컴 <span class="symbol">(AMZN)</span></div>
       <div class="price">$266.66 <span class="change">(-0.29%)</span></div>
       <div class="row">RSI(14) 57.4</div>
-      <div class="row">거래량 28,454,460 (전일대비 -17.5%)</div>
-      <div class="row">적정주가(GRAV) $228.72 (괴리율 +16.6%), 적정주가(M-GRAV) $255.31 (괴리율 +4.4%), 적정주가(M-GRAV(FCI)) $252.34 (괴리율 +5.7%)</div>
+      <div class="row">거래량 31,076,200 (전일대비 -9.9%)</div>
+      <div class="row">적정주가(GRAV) $228.71 (괴리율 +16.6%), 적정주가(M-GRAV) $255.30 (괴리율 +4.4%), 적정주가(M-GRAV(FCI)) $252.34 (괴리율 +5.7%)</div>
       
       <div class="disclosures">
         <div class="disclosures-title">최근 공시</div>
@@ -127,8 +186,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/sector-consumer-stocks-mixed-afternoon-204247882.html" target="_blank" rel="noopener">[Yahoo Finance] Sector Update: Consumer Stocks Mixed Late Afternoon</a></li>
-<li><a href="https://finance.yahoo.com/personal-finance/credit-cards/article/amazon-prime-and-uber-eats-partnership-0-delivery-fees-on-25-orders-for-prime-members-190333148.html" target="_blank" rel="noopener">[Yahoo Finance] Amazon Prime and Uber Eats partnership: $0 delivery fees on $25+ orders for Prime members</a></li></ul>
+        <ul><li><a href="https://www.tikr.com/blog/scott-galloway-predicts-anthropics-first-trade-opens-15-to-40-higher-thats-great-news-for-alphabet-and-amazon?ref=yahoofinance&amp;tlnk=yf-261114-5vwf9544" target="_blank" rel="noopener">[Yahoo Finance] Scott Galloway Predicts Anthropic’s First Trade Opens “15% to 40% Higher.” That’s Great News for Alphabet and Amazon</a></li>
+<li><a href="https://www.tikr.com/blog/jim-cramer-amazon-has-what-may-soon-be-a-50-billion-semiconductor-business?ref=yahoofinance&amp;tlnk=yf-261114-wq798x99" target="_blank" rel="noopener">[Yahoo Finance] Jim Cramer: Amazon Has What “May Soon Be a $50 Billion Semiconductor Business”</a></li></ul>
       </div>
     </div>
 
@@ -136,14 +195,14 @@
       <div class="card-title">브로드컴 <span class="symbol">(AVGO)</span></div>
       <div class="price">$347.01 <span class="change">(-4.76%)</span></div>
       <div class="row">RSI(14) 53.2</div>
-      <div class="row">거래량 28,723,341 (전일대비 -34.4%)</div>
-      <div class="row">적정주가(GRAV) $267.82 (괴리율 +29.6%), 적정주가(M-GRAV) $361.34 (괴리율 -4.0%), 적정주가(M-GRAV(FCI)) $366.01 (괴리율 -5.2%)</div>
+      <div class="row">거래량 31,602,000 (전일대비 -27.8%)</div>
+      <div class="row">적정주가(GRAV) $265.02 (괴리율 +30.9%), 적정주가(M-GRAV) $357.57 (괴리율 -3.0%), 적정주가(M-GRAV(FCI)) $362.19 (괴리율 -4.2%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.thestreet.com/investing/stocks/bank-of-america-amd-price-target" target="_blank" rel="noopener">[Yahoo Finance] Bank of America resets AMD stock price target as Nvidia CEO exits</a></li>
-<li><a href="https://app.moby.co/home/news/news-nvidia-tanks-as-altman-joins-dario-in-ai-chip-export-ban?utm_source=yahoo_finance&amp;utm_medium=rss" target="_blank" rel="noopener">[Yahoo Finance] Nvidia Tanks as Altman Joins Dario in AI Chip Export Ban</a></li></ul>
+        <ul><li><a href="https://www.barrons.com/articles/stockstoday-rotation-after-nvidia-3d0dbe00?siteid=yhoof2&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] Review &amp; Preview: Moving On</a></li>
+<li><a href="https://www.trefis.com/stock/dt/articles/624866/can-you-justify-buying-dynatrace-stock-today/2026-11-13" target="_blank" rel="noopener">[Yahoo Finance] Can You Justify Buying Dynatrace Stock Today?</a></li></ul>
       </div>
     </div>
 
@@ -151,14 +210,14 @@
       <div class="card-title">알파벳 A <span class="symbol">(GOOGL)</span></div>
       <div class="price">$295.77 <span class="change">(-0.98%)</span></div>
       <div class="row">RSI(14) 40.6</div>
-      <div class="row">거래량 29,134,410 (전일대비 -18.0%)</div>
-      <div class="row">적정주가(GRAV) $283.97 (괴리율 +4.2%), 적정주가(M-GRAV) $303.20 (괴리율 -2.4%), 적정주가(M-GRAV(FCI)) $302.43 (괴리율 -2.2%)</div>
+      <div class="row">거래량 30,712,800 (전일대비 -13.6%)</div>
+      <div class="row">적정주가(GRAV) $283.97 (괴리율 +4.2%), 적정주가(M-GRAV) $303.19 (괴리율 -2.4%), 적정주가(M-GRAV(FCI)) $302.43 (괴리율 -2.2%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/inside-jim-cramer-charitable-trust-203302856.html" target="_blank" rel="noopener">[Yahoo Finance] Inside Jim Cramer’s Charitable Trust: 5 Stocks He Actually Owns</a></li>
-<li><a href="https://www.fool.com/investing/2026/11/13/wall-street-is-writing-off-nvidia-stock-heres-why/" target="_blank" rel="noopener">[Yahoo Finance] Wall Street Is Writing Off Nvidia Stock. Here&#x27;s Why That&#x27;s a Mistake.</a></li></ul>
+        <ul><li><a href="https://www.fool.com/investing/2026/11/14/sundar-pichai-alphabet-cloud-revenue-gemini-search/" target="_blank" rel="noopener">[Yahoo Finance] Sundar Pichai Reported Alphabet&#x27;s Cloud Revenue Grew 103% Last Quarter While the Gemini App Reached 1 Billion Monthly Users. Is Google Cloud Becoming a Bigger Growth Driver Than Search?</a></li>
+<li><a href="https://www.fool.com/investing/2026/11/14/nvidia-alphabet-microsoft-and-micron-are-buying-anthropic-ipo/" target="_blank" rel="noopener">[Yahoo Finance] Nvidia, Alphabet, Microsoft, and Micron Are All Buying Anthropic’s IPO. Should You Buy Too?</a></li></ul>
       </div>
     </div>
 
@@ -166,8 +225,8 @@
       <div class="card-title">메타 플랫폼스 <span class="symbol">(META)</span></div>
       <div class="price">$641.69 <span class="change">(+2.90%)</span></div>
       <div class="row">RSI(14) 47.8</div>
-      <div class="row">거래량 14,662,396 (전일대비 +41.8%)</div>
-      <div class="row">적정주가(GRAV) $356.49 (괴리율 +80.0%), 적정주가(M-GRAV) $416.52 (괴리율 +54.1%), 적정주가(M-GRAV(FCI)) $416.00 (괴리율 +54.3%)</div>
+      <div class="row">거래량 15,127,500 (전일대비 +46.3%)</div>
+      <div class="row">적정주가(GRAV) $356.48 (괴리율 +80.0%), 적정주가(M-GRAV) $416.52 (괴리율 +54.1%), 적정주가(M-GRAV(FCI)) $416.00 (괴리율 +54.3%)</div>
       
       <div class="disclosures">
         <div class="disclosures-title">최근 공시</div>
@@ -178,8 +237,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/technology/articles/meta-tests-prediction-market-app-203017664.html" target="_blank" rel="noopener">[Yahoo Finance] Meta tests prediction-market app for employees, WSJ reports</a></li>
-<li><a href="https://www.wsj.com/tech/meta-testing-new-prediction-market-app-with-employees-bf7bacb2?siteid=yhoof2&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] Meta Testing New Prediction-Market App With Employees</a></li></ul>
+        <ul><li><a href="https://finance.yahoo.com/energy/articles/centrus-energy-leu-lands-multiyear-061743445.html" target="_blank" rel="noopener">[Yahoo Finance] Centrus Energy (LEU) Lands Multiyear HALEU Deal Backed By Customer Prepayments</a></li>
+<li><a href="https://finance.yahoo.com/markets/stocks/articles/3-cash-flow-stocks-trading-051406202.html" target="_blank" rel="noopener">[Yahoo Finance] 3 Cash Flow Stocks Trading Up To 49% Below Fair Value</a></li></ul>
       </div>
     </div>
 
@@ -187,14 +246,14 @@
       <div class="card-title">마이크로소프트 <span class="symbol">(MSFT)</span></div>
       <div class="price">$523.88 <span class="change">(+0.17%)</span></div>
       <div class="row">RSI(14) 48.8</div>
-      <div class="row">거래량 21,622,043 (전일대비 +16.0%)</div>
-      <div class="row">적정주가(GRAV) $578.85 (괴리율 -9.5%), 적정주가(M-GRAV) $596.76 (괴리율 -12.2%), 적정주가(M-GRAV(FCI)) $596.98 (괴리율 -12.2%)</div>
+      <div class="row">거래량 26,155,900 (전일대비 +40.3%)</div>
+      <div class="row">적정주가(GRAV) $578.97 (괴리율 -9.5%), 적정주가(M-GRAV) $596.89 (괴리율 -12.2%), 적정주가(M-GRAV(FCI)) $597.11 (괴리율 -12.3%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://news.google.com/rss/articles/CBMioAFBVV95cUxORmtkNkl6NGZ3Z1d5Z3JVMWQzRXBMeHFwLWFGT05McGNHejlKQjBZbkc4TVJPR2RzczlJTUxHT3hpdlk3Z0xyVDJ2eEdENUxRTUxzbnJOQkx5M2JhMWRhakR3WGJWNHM1LTFmd0tsTzhCT29jQ2txWEJGVkhJYXpBVjhDckRNVEIxVjg5X3ZYbjhIMXQ2bm9MX2U3YkN6T0dz?oc=5" target="_blank" rel="noopener">[Bloomberg] Microsoft Races to Fix an Outage Now in Its Second Day</a></li>
-<li><a href="https://finance.yahoo.com/markets/stocks/articles/microsoft-vs-salesforce-one-software-203940316.html" target="_blank" rel="noopener">[Yahoo Finance] Microsoft vs. Salesforce: One Software Stock Remains a Top Pick, the Other Has Something to Prove, Says RBC</a></li></ul>
+        <ul><li><a href="https://www.fool.com/investing/2026/11/14/nvidia-alphabet-microsoft-and-micron-are-buying-anthropic-ipo/" target="_blank" rel="noopener">[Yahoo Finance] Nvidia, Alphabet, Microsoft, and Micron Are All Buying Anthropic’s IPO. Should You Buy Too?</a></li>
+<li><a href="https://www.wsj.com/business/telecom/the-chaos-and-unexpected-joys-of-a-19-hour-global-email-outage-37b7170c?siteid=yhoof2&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] The Chaos and Unexpected Joys of a 19-Hour Global Email Outage</a></li></ul>
       </div>
     </div>
 
@@ -202,9 +261,9 @@
       <div class="card-title">엔비디아 <span class="symbol">(NVDA)</span></div>
       <div class="price">$162.85 <span class="change">(-2.01%)</span></div>
       <div class="row">RSI(14) 24.9</div>
-      <div class="row">거래량 356,991,780 (전일대비 -52.3%)</div>
-      <div class="row">적정주가(GRAV) $169.99 (괴리율 -4.2%), 적정주가(M-GRAV) $209.17 (괴리율 -22.1%), 적정주가(M-GRAV(FCI)) $210.11 (괴리율 -22.5%)</div>
-      <div class="row">매수 관점 우세 (RSI 24.9 · M-GRAV 괴리율 -22.1%, M-GRAV(FCI) 괴리율 -22.5%)</div>
+      <div class="row">거래량 363,819,700 (전일대비 -51.3%)</div>
+      <div class="row">적정주가(GRAV) $168.53 (괴리율 -3.4%), 적정주가(M-GRAV) $207.39 (괴리율 -21.5%), 적정주가(M-GRAV(FCI)) $208.32 (괴리율 -21.8%)</div>
+      <div class="row">매수 관점 우세 (RSI 24.9 · M-GRAV 괴리율 -21.5%, M-GRAV(FCI) 괴리율 -21.8%)</div>
       
       <div class="disclosures">
         <div class="disclosures-title">최근 공시</div>
@@ -213,8 +272,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://seekingalpha.com/symbol/NVDA/news?source=feed_symbol_NVDA" target="_blank" rel="noopener">[Seeking Alpha] SA Asks: Is Nvidia a buy, sell or hold after Jensen Huang&#x27;s departure?</a></li>
-<li><a href="https://finance.yahoo.com/technology/article/nothing-has-changed-why-some-nvidia-stock-bulls-arent-wavering-after-jensen-huang-ouster-204522204.html" target="_blank" rel="noopener">[Yahoo Finance] &#x27;Nothing has changed&#x27;: Why some Nvidia stock bulls aren&#x27;t wavering after Jensen Huang ouster</a></li></ul>
+        <ul><li><a href="https://www.fool.com/investing/2026/11/14/qualcomm-is-cheap-enough-to-hold-through-2030/" target="_blank" rel="noopener">[Yahoo Finance] Qualcomm Is Cheap Enough to Hold Through 2030</a></li>
+<li><a href="https://news.google.com/rss/articles/CBMizAFBVV95cUxPQzlyMGNqUEVudFIwd2F2dk5qVTJXNjRZM1NkeUpyTWN1MHR6d2w5eVZ4cXZONVVmNkdyTEpnZXhENjFENHJfaW1ONjVFVkM4Qno4aW1keGFZQVVQdGZZS2hqTGVwWmxxd0VBSjdsMDhVVlZ6V2xMc2RkYmZDcjEyWVR5Q1NhMkV3enhVeUtleW4tcFpJc21UcXdnVVotbjVqV0pmSFh4cWRUazdYQ2JMcUNidE9XSkFhNldLOFU1YnhpWks3akIyR3QtX1g?oc=5" target="_blank" rel="noopener">[Bloomberg] Nvidia CEO’s Ouster Puts Singapore’s Business Reputation Under the Spotlight</a></li></ul>
       </div>
     </div>
 
@@ -222,15 +281,15 @@
       <div class="card-title">테슬라 <span class="symbol">(TSLA)</span></div>
       <div class="price">$390.22 <span class="change">(-1.82%)</span></div>
       <div class="row">RSI(14) 53.5</div>
-      <div class="row">거래량 30,777,594 (전일대비 +5.5%)</div>
+      <div class="row">거래량 32,268,400 (전일대비 +10.6%)</div>
       <div class="row">적정주가(RSI50 평균가, 추세 기준·교차점 평균) $383.96 (괴리율 +1.6%)</div>
       <div class="row">※ GRAV·M-GRAV 전환 가능: EPS $0.63, Target P/E 191.0, 추정 GRAV $69.36 (g 0% 가정·beta 1.74) → config.py VALUATION(g·beta)·M_GRAV(m_score·m_score_fci) 입력 필요</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.investors.com/how-to-invest/tesla-stock-tsla-americas-greatest-opportunities/?src=A00220&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] America&#x27;s Greatest Opportunities: The Earnings Gap That Put Tesla Stock At Ludicrous Speed</a></li>
-<li><a href="https://news.google.com/rss/articles/CBMizgFBVV95cUxOMGFPTlpYczR2UnZRSnkxVXpEemZUNGV5NkEteVpDTG9vZ2d5Yzk0ODZKLU1lN0xZRGhEb1VOdDlZRlBkXzl3akxLRExYUzdOalNNRThzVnZRTjU1TC02NlJRNUcyMlpraXl6b0RzY1JhQTV0TzQxdl9ha3lxSU5xTlVBTEVCSThlTXhJdUd5THpUdzhDWTNyM0xCME1Ea01VemlXNV9hUUVKdEkyNUhWUUs4Y2dBcThRSEl2NzBtS2p6N2ZqZDVVRk1QbmRnUQ?oc=5" target="_blank" rel="noopener">[Bloomberg] SpaceX, Tesla and Anthropic Test the Limits of Corporate Finance</a></li></ul>
+        <ul><li><a href="https://stocktwits.com/news-articles/markets/equity/tesla-cybercab-monthly-subscription-too-high-elon-musk-mkbhd/cNbPER1R9Q1" target="_blank" rel="noopener">[Yahoo Finance] Tesla Cybercab’s Monthly Subscription Is ‘Too High,’ Elon Musk Admits To MKBHD: ‘Should Match The Cost Of…’</a></li>
+<li><a href="https://ca.finance.yahoo.com/news/tesla-invites-select-customers-buy-080131781.html" target="_blank" rel="noopener">[Yahoo Finance] Tesla invites select customers to buy Cybercab for personal use</a></li></ul>
       </div>
     </div>
 
@@ -238,14 +297,14 @@
       <div class="card-title">마이크론 <span class="symbol">(MU)</span></div>
       <div class="price">$778.31 <span class="change">(-2.52%)</span></div>
       <div class="row">RSI(14) 42.4</div>
-      <div class="row">거래량 26,413,851 (전일대비 -4.4%)</div>
+      <div class="row">거래량 27,792,200 (전일대비 +0.6%)</div>
       <div class="row">적정주가(GRAV) $1,202.48 (괴리율 -35.3%), 적정주가(M-GRAV) $1,660.44 (괴리율 -53.1%), 적정주가(M-GRAV(FCI)) $1,689.71 (괴리율 -53.9%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/inside-jim-cramer-charitable-trust-203302856.html" target="_blank" rel="noopener">[Yahoo Finance] Inside Jim Cramer’s Charitable Trust: 5 Stocks He Actually Owns</a></li>
-<li><a href="https://www.barrons.com/articles/sandisk-stock-ai-data-centers-3ea38c06?siteid=yhoof2&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] Chart of the Day: Sandisk Stock Looks Ready to Bounce Back</a></li></ul>
+        <ul><li><a href="https://www.fool.com/investing/2026/11/14/is-it-too-late-to-buy-micron-stock/" target="_blank" rel="noopener">[Yahoo Finance] Is It Too Late to Buy Micron Stock?</a></li>
+<li><a href="https://www.fool.com/investing/2026/11/14/nvidia-alphabet-microsoft-and-micron-are-buying-anthropic-ipo/" target="_blank" rel="noopener">[Yahoo Finance] Nvidia, Alphabet, Microsoft, and Micron Are All Buying Anthropic’s IPO. Should You Buy Too?</a></li></ul>
       </div>
     </div>
 
@@ -253,8 +312,8 @@
       <div class="card-title">SK하이닉스(나스닥) <span class="symbol">(SKHY)</span></div>
       <div class="price">$131.79 <span class="change">(-4.30%)</span></div>
       <div class="row">RSI(14) 41.6</div>
-      <div class="row">거래량 15,979,972 (전일대비 +5.4%)</div>
-      <div class="row">적정주가(GRAV) $135.82 (괴리율 -3.0%), 적정주가(M-GRAV) $164.78 (괴리율 -20.0%), 적정주가(M-GRAV(FCI)) $165.93 (괴리율 -20.6%)</div>
+      <div class="row">거래량 16,283,700 (전일대비 +7.4%)</div>
+      <div class="row">적정주가(GRAV) $135.97 (괴리율 -3.1%), 적정주가(M-GRAV) $164.89 (괴리율 -20.1%), 적정주가(M-GRAV(FCI)) $166.03 (괴리율 -20.6%)</div>
       
       <div class="disclosures">
         <div class="disclosures-title">최근 공시</div>
@@ -263,8 +322,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/sk-hynix-stocks-fall-3-183209379.html" target="_blank" rel="noopener">[Yahoo Finance] SK hynix Stocks Fall 3.03% as Nvidia Leadership Shock Hits Key HBM Supplier</a></li>
-<li><a href="https://finance.yahoo.com/markets/stocks/articles/samsung-electronics-stocks-move-lower-183110049.html" target="_blank" rel="noopener">[Yahoo Finance] Samsung Electronics Stocks Move Lower as Nvidia CEO Exit Tests AI Memory Rally</a></li></ul>
+        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/rosenblatt-securities-thinks-market-misses-213235021.html" target="_blank" rel="noopener">[Yahoo Finance] What Rosenblatt Securities Thinks the Market Misses on SK Hynix (SKHY)</a></li>
+<li><a href="https://finance.yahoo.com/markets/stocks/articles/sk-hynix-stocks-fall-3-183209379.html" target="_blank" rel="noopener">[Yahoo Finance] SK hynix Stocks Fall 3.03% as Nvidia Leadership Shock Hits Key HBM Supplier</a></li></ul>
       </div>
     </div>
 
@@ -272,14 +331,18 @@
       <div class="card-title">스페이스X <span class="symbol">(SPCX)</span></div>
       <div class="price">$139.11 <span class="change">(-0.59%)</span></div>
       <div class="row">RSI(14) 46.4</div>
-      <div class="row">거래량 73,257,090 (전일대비 -23.7%)</div>
+      <div class="row">거래량 77,314,900 (전일대비 -19.4%)</div>
       <div class="row">적정주가(GRAV) $87.28 (괴리율 +59.4%), 적정주가(M-GRAV) $94.02 (괴리율 +48.0%), 적정주가(M-GRAV(FCI)) $93.18 (괴리율 +49.3%), 적정주가(RSI50 평균가, 추세 기준·120분봉/교차점 평균/이력 짧음) $145.54 (괴리율 -4.4%)</div>
       
+      <div class="disclosures">
+        <div class="disclosures-title">최근 공시</div>
+        <ul><li><a href="https://www.sec.gov/Archives/edgar/data/1181412/000142601226000007/xslSCHEDULE_13G_X02/primary_doc.xml" target="_blank" rel="noopener">11/13 SCHEDULE 13G/A</a></li></ul>
+      </div>
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://stocktwits.com/news-articles/markets/equity/nvidia-board-reportedly-approached-arm-ceo-rene-haas-to-succeed-jensen-huang-as-top-execs-threaten-to-quit-join-space-x-terafab/cNbRWJ2R9Qb" target="_blank" rel="noopener">[Yahoo Finance] Nvidia Board Reportedly Approached Arm CEO Rene Haas To Succeed Jensen Huang As Top Execs Threaten To Quit, Join SpaceX Terafab</a></li>
-<li><a href="https://seekingalpha.com/article/4967990-spacex-math-says-69-percent-downside?source=feed_symbol_SPCX" target="_blank" rel="noopener">[Seeking Alpha] SpaceX: The Math Says 69% Downside</a></li></ul>
+        <ul><li><a href="https://www.tikr.com/blog/with-a-300-target-morgan-stanley-bets-spacexs-selloff-went-too-far?ref=yahoofinance&amp;tlnk=yf-261114-2gx2vw44" target="_blank" rel="noopener">[Yahoo Finance] With a $300 Target, Morgan Stanley Bets SpaceX’s Selloff Went Too Far</a></li>
+<li><a href="https://www.fool.com/investing/2026/11/14/prediction-2-stocks-that-will-be-worth-more-than-s/" target="_blank" rel="noopener">[Yahoo Finance] Prediction: 2 Stocks That Will Be Worth More Than SpaceX 5 Years From Now</a></li></ul>
       </div>
     </div>
 
@@ -287,29 +350,29 @@
       <div class="card-title">로켓랩 <span class="symbol">(RKLB)</span></div>
       <div class="price">$61.53 <span class="change">(-3.96%)</span></div>
       <div class="row">RSI(14) 52.9</div>
-      <div class="row">거래량 12,505,072 (전일대비 -7.5%)</div>
-      <div class="row">적정주가(RSI50 평균가, 추세 기준·120분봉/교차점 평균) $74.33 (괴리율 -17.2%)</div>
+      <div class="row">거래량 13,178,500 (전일대비 -2.6%)</div>
+      <div class="row">적정주가(RSI50 평균가, 추세 기준·120분봉/교차점 평균) $74.46 (괴리율 -17.4%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/earnings-week-scorecard-beats-rewarded-203315112.html" target="_blank" rel="noopener">[Yahoo Finance] Earnings week scorecard: beats rewarded selectively as AI-infrastructure names pull back</a></li>
-<li><a href="https://www.investors.com/news/spacex-starship-flight-15-launch-tower-catch-elon-musk-rocket-lab-electron-milestone-spcx-stock-rklb/?src=A00220&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] SpaceX&#x27;s Starship Flight 15, Rocket Lab&#x27;s Electron Ready For Milestone Missions</a></li></ul>
+        <ul><li><a href="https://www.trefis.com/stock/lunr/articles/624904/what-is-driving-intuitive-machines-stock/2026-11-13" target="_blank" rel="noopener">[Yahoo Finance] What Is Driving Intuitive Machines Stock?</a></li>
+<li><a href="https://www.investors.com/news/spacex-starship-flight-15-launch-tower-catch-elon-musk-rocket-lab-electron-milestone-spcx-stock-rklb/?src=A00220&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] SpaceX&#x27;s Starship Flight 15 Takes Off, Rocket Lab Preps For Milestone Mission</a></li></ul>
       </div>
     </div>
 
     <div class="card up">
       <div class="card-title">일라이릴리 <span class="symbol">(LLY)</span></div>
-      <div class="price">$1,445.40 <span class="change">(+1.27%)</span></div>
+      <div class="price">$1,443.50 <span class="change">(+1.26%)</span></div>
       <div class="row">RSI(14) 69.9</div>
-      <div class="row">거래량 1,538,672 (전일대비 -36.1%)</div>
-      <div class="row">적정주가(GRAV) $1,359.02 (괴리율 +6.4%), 적정주가(M-GRAV) $1,225.80 (괴리율 +17.9%), 적정주가(M-GRAV(FCI)) $1,228.21 (괴리율 +17.7%)</div>
+      <div class="row">거래량 2,081,600 (전일대비 -13.5%)</div>
+      <div class="row">적정주가(GRAV) $1,361.91 (괴리율 +6.0%), 적정주가(M-GRAV) $1,228.40 (괴리율 +17.5%), 적정주가(M-GRAV(FCI)) $1,230.82 (괴리율 +17.3%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.trefis.com/stock/mrk/articles/625024/what-will-decide-merck-stock-over-the-next-six-months/2026-11-13" target="_blank" rel="noopener">[Yahoo Finance] What Will Decide Merck Stock Over The Next Six Months?</a></li>
-<li><a href="https://finance.yahoo.com/healthcare/articles/hims-partners-lilly-offer-fda-151200800.html" target="_blank" rel="noopener">[Yahoo Finance] HIMS Partners With Lilly to Offer FDA-Approved Weight-Loss Drugs</a></li></ul>
+        <ul><li><a href="https://finance.yahoo.com/healthcare/articles/cvs-says-glp-1s-save-110514978.html" target="_blank" rel="noopener">[Yahoo Finance] CVS says GLP-1s save money when priced below $350 per month</a></li>
+<li><a href="https://www.tikr.com/blog/trump-touts-lillys-3-5-billion-obesity-drug-plant-its-10th-new-u-s-site-since-2020?ref=yahoofinance&amp;tlnk=yf-261114-c568j2x4" target="_blank" rel="noopener">[Yahoo Finance] Trump Touts Lilly’s “$3.5 Billion” Obesity Drug Plant, Its 10th New U.S. Site Since 2020</a></li></ul>
       </div>
     </div>
 
@@ -317,14 +380,14 @@
       <div class="card-title">코스트코 <span class="symbol">(COST)</span></div>
       <div class="price">$1,106.21 <span class="change">(+1.28%)</span></div>
       <div class="row">RSI(14) 76.1</div>
-      <div class="row">거래량 1,807,980 (전일대비 -17.9%)</div>
+      <div class="row">거래량 1,874,100 (전일대비 -14.9%)</div>
       <div class="row">적정주가(GRAV) $1,248.74 (괴리율 -11.4%), 적정주가(M-GRAV) $1,145.56 (괴리율 -3.4%), 적정주가(M-GRAV(FCI)) $1,142.72 (괴리율 -3.2%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://finance.yahoo.com/markets/stocks/articles/amazon-stands-best-consumer-stock-155805650.html" target="_blank" rel="noopener">[Yahoo Finance] Amazon stands out as the best consumer stock pick</a></li>
-<li><a href="https://www.barrons.com/articles/lowes-stock-downgrade-stifel-earnings-60e5b762?siteid=yhoof2&amp;yptr=yahoo" target="_blank" rel="noopener">[Yahoo Finance] Lowe’s Stock Cut to Sell as It Struggles to Catch Up to Home Depot</a></li></ul>
+        <ul><li><a href="https://247wallst.com/personal-finance/2026/11/14/theyre-getting-insider-information-from-costco-employees-inside-the-pokemon-card-line-where-resellers-buy-executive-memberships/" target="_blank" rel="noopener">[Yahoo Finance] ‘They’re Getting Insider Information From Costco Employees’: Inside the Pokemon Card Line Where Resellers Buy Executive Memberships</a></li>
+<li><a href="https://www.thestreet.com/investing/stocks/cost-jim-cramer-says-costco-is-a-buy-after-30-special-dividend-rewards-shareholders-his-trust-owns-it" target="_blank" rel="noopener">[Yahoo Finance] Jim Cramer tells investors to buy a stock his Trust is glad it owns</a></li></ul>
       </div>
     </div></div>
     </section>
@@ -337,7 +400,7 @@
       <div class="price">209,000원 <span class="change">(+1.21%)</span></div>
       <div class="row">RSI(14) 44.3</div>
       <div class="row">거래량 12,822,005 (전일대비 -35.0%)</div>
-      <div class="row">적정주가(GRAV) 348,081원 (괴리율 -40.0%), 적정주가(M-GRAV) 371,627원 (괴리율 -43.8%), 적정주가(M-GRAV(FCI)) 373,601원 (괴리율 -44.1%)</div>
+      <div class="row">적정주가(GRAV) 348,255원 (괴리율 -40.0%), 적정주가(M-GRAV) 371,736원 (괴리율 -43.8%), 적정주가(M-GRAV(FCI)) 373,705원 (괴리율 -44.1%)</div>
       
       <div class="disclosures">
         <div class="disclosures-title">최근 공시</div>
@@ -350,8 +413,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.geconomy.co.kr/news/article.html?no=325652" target="_blank" rel="noopener">[네이버 뉴스] 엔비디아 쇼크에 美 반도체주 급락…고물가·고금리까지 글로벌 금융시...</a></li>
-<li><a href="https://www.geconomy.co.kr/news/article.html?no=325651" target="_blank" rel="noopener">[네이버 뉴스] 5500선 뚫고도 5290선 추락…코스피, 외국인 매도에 245포인트 출렁</a></li></ul>
+        <ul><li><a href="http://www.osen.co.kr/article/G1112910275" target="_blank" rel="noopener">[네이버 뉴스] 이현이, 집안 대단하네..남편은 S전자→삼촌은 이기성 화백 ‘깜짝’(워...</a></li>
+<li><a href="https://www.edaily.co.kr/News/Read?newsId=02791286645645720&amp;mediaCodeNo=257&amp;utm_source=naver&amp;utm_medium=referral&amp;utm_campaign=news_syndication&amp;utm_content=original_article" target="_blank" rel="noopener">[네이버 뉴스] 홍라희에 &#x27;삼전 1115만주&#x27; 받은 이재용…증여세는 얼마?</a></li></ul>
       </div>
     </div>
 
@@ -360,13 +423,13 @@
       <div class="price">1,233,000원 <span class="change">(-0.64%)</span></div>
       <div class="row">RSI(14) 41.9</div>
       <div class="row">거래량 3,199,812 (전일대비 -24.5%)</div>
-      <div class="row">적정주가(GRAV) 2,178,873원 (괴리율 -43.4%), 적정주가(M-GRAV) 2,643,587원 (괴리율 -53.4%), 적정주가(M-GRAV(FCI)) 2,661,913원 (괴리율 -53.7%)</div>
+      <div class="row">적정주가(GRAV) 2,181,425원 (괴리율 -43.5%), 적정주가(M-GRAV) 2,645,243원 (괴리율 -53.4%), 적정주가(M-GRAV(FCI)) 2,663,529원 (괴리율 -53.7%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.news2day.co.kr/article/20261114500003" target="_blank" rel="noopener">[네이버 뉴스] [N2 포커스] 외국인 SK하이닉스 팔고 NAVER 샀다…기관·개인은 반도체 ...</a></li>
-<li><a href="https://www.ziksir.com/news/articleView.html?idxno=153249" target="_blank" rel="noopener">[네이버 뉴스] [산업 직썰] &#x27;깐부&#x27; 젠슨 황 없는 엔비디아 …K반도체, AI 호황 이어갈까</a></li></ul>
+        <ul><li><a href="https://www.cbci.co.kr/news/articleView.html?idxno=626889" target="_blank" rel="noopener">[네이버 뉴스] [뉴욕증시 마감] 다우 소폭 상승 속 엔비디아 2% 하락하며 시총 4조 달러...</a></li>
+<li><a href="https://kjmbc.co.kr/NewsArticle/1545690" target="_blank" rel="noopener">[네이버 뉴스] 장관들이 직접 진화한 &#x27;투자 회의론&#x27;…&quot;이달 중 반도체 공장 배치 확정...</a></li></ul>
       </div>
     </div>
 
@@ -375,13 +438,13 @@
       <div class="price">270,500원 <span class="change">(+1.50%)</span></div>
       <div class="row">RSI(14) 36.2</div>
       <div class="row">거래량 480,973 (전일대비 -27.0%)</div>
-      <div class="row">적정주가(GRAV) 388,784원 (괴리율 -30.4%), 적정주가(M-GRAV) 389,979원 (괴리율 -30.6%), 적정주가(M-GRAV(FCI)) 389,865원 (괴리율 -30.6%)</div>
+      <div class="row">적정주가(GRAV) 386,637원 (괴리율 -30.0%), 적정주가(M-GRAV) 388,429원 (괴리율 -30.4%), 적정주가(M-GRAV(FCI)) 388,257원 (괴리율 -30.3%)</div>
       
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.ekn.kr/web/view.php?key=20261113021029332" target="_blank" rel="noopener">[네이버 뉴스] 레이싱카 부품이 119만원짜리 테이블로…車 굿즈도 명품 시대</a></li>
-<li><a href="https://www.geconomy.co.kr/news/article.html?no=325651" target="_blank" rel="noopener">[네이버 뉴스] 5500선 뚫고도 5290선 추락…코스피, 외국인 매도에 245포인트 출렁</a></li></ul>
+        <ul><li><a href="https://www.thepowernews.co.kr/view.php?ud=202611140832577313dfcd109a8_7" target="_blank" rel="noopener">[네이버 뉴스] 안호영 의원, 전북 미래산업 예산 확보 총력…현대차 투자·5극3특 지원...</a></li>
+<li><a href="https://www.mk.co.kr/article/12208998" target="_blank" rel="noopener">[네이버 뉴스] ‘투자의 판’ 흔드는 대형 사건 잇달아…삼전닉스 리포트 검색 나란히...</a></li></ul>
       </div>
     </div></div>
     </section>
