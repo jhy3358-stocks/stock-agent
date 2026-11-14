@@ -259,6 +259,9 @@ def test_release_phase_release_day_and_next_day_only():
     assert mi.release_phase(_kst(2026, 11, 11, 21, 30), release) == "released"
     assert mi.release_phase(_kst(2026, 11, 12, 8, 0), release) is None  # 이틀 뒤
     assert mi.release_phase(_kst(2026, 11, 12, 8, 0), None) is None
+    # 주 초부터 미리 보기: 11/10(화) 발표면 11/9(월)부터, 전 주 토요일은 아님
+    assert mi.release_phase(_kst(2026, 11, 9, 8, 0), release, preview_from_week_start=True) == "preview"
+    assert mi.release_phase(_kst(2026, 11, 7, 6, 0), release, preview_from_week_start=True) is None
 
 
 def test_inflation_phase_prefers_upcoming_preview():
@@ -270,5 +273,8 @@ def test_inflation_phase_prefers_upcoming_preview():
     assert mi._inflation_phase(ind, _kst(2026, 11, 11, 8, 0)) == "released"
     assert mi._inflation_phase(ind, _kst(2026, 11, 20, 8, 0)) is None
     assert mi._inflation_phase(ind, _kst(2026, 12, 10, 17, 0)) == "preview"
+    # 12/10(목) 발표 -> 그 주 월요일(12/7)부터 예상치, 전 주 금요일은 표시 안 함
+    assert mi._inflation_phase(ind, _kst(2026, 12, 7, 8, 0)) == "preview"
+    assert mi._inflation_phase(ind, _kst(2026, 12, 4, 21, 30)) is None
     # 발표 시각이 지났는데 FRED가 아직 갱신 전이면 계속 예상치로
     assert mi._inflation_phase(ind, _kst(2026, 12, 11, 8, 0)) == "preview"

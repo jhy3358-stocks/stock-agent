@@ -16,7 +16,7 @@
 - `src/sec_client.py` — 미국 종목 최근 공시 수집 (SEC EDGAR, API 키 불필요)
 - `src/news_client.py` — 미국 종목 관련 뉴스 수집 (Yahoo Finance `yfinance.news`, Seeking Alpha 공개 RSS — 둘 다 로그인 불필요)
 - `src/naver_news_client.py` — 국내 종목 관련 뉴스 수집 (네이버 뉴스 검색 API, 무료 인증키 필요)
-- `src/macro_indicators.py` — 투자지표 수집: 미국 CPI·PPI 헤드라인/근원(FRED, 전월비 SA·전년비 NSA) 예상치(ForexFactory 컨센서스, `data/consensus_cache.json`에 누적)·속보치·전월 수정치(ALFRED), 신규 실업수당 청구 건수(FRED ICSA, 주간, 예상치 포함). 물가·실업수당 카드는 발표일(한국 날짜, 발표 전 예상치)과 다음 날(발표치) 리포트에만 표시, 미국채 2/10/30년 금리(CNBC 실시간, 실패 시 재무부 종가), 달러 인덱스·WTI·브렌트(yfinance), 전일 대비 등락률
+- `src/macro_indicators.py` — 투자지표 수집: 미국 CPI·PPI 헤드라인/근원(FRED, 전월비 SA·전년비 NSA) 예상치(ForexFactory 컨센서스, `data/consensus_cache.json`에 누적)·속보치·전월 수정치(ALFRED), 신규 실업수당 청구 건수(FRED ICSA, 주간, 예상치 포함). 물가·실업수당 카드는 발표 전 예상치(CPI·PPI는 발표 주 월요일부터, 실업수당은 발표일)와 발표일·다음 날(발표치) 리포트에만 표시, 미국채 2/10/30년 금리(CNBC 실시간, 실패 시 재무부 종가), 달러 인덱스·WTI·브렌트(yfinance), 전일 대비 등락률
 - `src/signal.py` — RSI/이동평균을 조합한 규칙 기반 매수/매도 관점 코멘트 (애널리스트 의견 아님, 참고용)
 - `src/kakao_client.py` — 카카오톡 "나에게 보내기" 발송 (REST API 직접 호출)
 - `src/main.py` — 전체 파이프라인 실행 진입점

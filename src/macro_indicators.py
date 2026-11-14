@@ -11,7 +11,7 @@
 - 신규 실업수당 청구 건수: FRED ICSA(주간, 계절조정). 매주 목요일 발표되는 직전 주(토요일
   마감) 값과 전주 대비 증감, 예상치(ForexFactory)를 보여준다.
 - 물가·실업수당은 발표일(한국 날짜) 리포트(발표 전: 예상치)와 그다음 날 리포트(발표치)에만
-  넣는다. 발표 시각은 ForexFactory 일정에서 받고(컨센서스 캐시에 함께 저장), 실업수당은 일정을
+  넣는다. CPI·PPI 예상치는 발표 주 월요일부터 보여준다(실업수당은 매주라 발표일만). 발표 시각은 ForexFactory 일정에서 받고(컨센서스 캐시에 함께 저장), 실업수당은 일정을
   못 받으면 목요일 08:30(미 동부)으로 본다. CPI·PPI는 일정을 못 받으면 표시하지 않는다.
 - 국채 금리(2년/10년/30년): 리포트 발송 시점의 실시간 값을 CNBC 시세(US2Y/US10Y/US30Y)로
   받는다. 국채는 아시아·유럽 시간에도 거래돼 한국 시간 08:00/17:00/21:30 어느 때든 그 시점
@@ -375,21 +375,27 @@ def _release_time(entry: dict) -> Optional[dt.datetime]:
     return dt.datetime.fromisoformat(entry["release"]) if entry.get("release") else None
 
 
-def release_phase(now: dt.datetime, release: Optional[dt.datetime]) -> Optional[str]:
-    """발표일(한국 날짜) 리포트와 그다음 날 리포트에만 보인다.
+def release_phase(
+    now: dt.datetime, release: Optional[dt.datetime], preview_from_week_start: bool = False
+) -> Optional[str]:
+    """발표 전에는 발표일(한국 날짜) 리포트에, 발표 후에는 발표일·그다음 날 리포트에 보인다.
 
     미국 지표는 한국 시간 밤 22:30(서머타임 해제 시 23:30)에 나와 발표일 리포트(08:00/17:00/
-    21:30)는 발표 전이라 예상치만, 다음 날 리포트는 발표치를 보여준다."""
+    21:30)는 발표 전이라 예상치만, 다음 날 리포트는 발표치를 보여준다.
+    preview_from_week_start면 발표 주 월요일(한국 날짜)부터 예상치를 보여준다. 예상치 출처
+    (ForexFactory 주간 일정)에 발표 주 일요일(미 동부)부터 올라오기 때문이다."""
     if release is None:
         return None
     day, release_day = now.astimezone(KST).date(), release.astimezone(KST).date()
     if now < release:
-        return "preview" if day == release_day else None
+        first_day = release_day - dt.timedelta(days=release_day.weekday()) if preview_from_week_start else release_day
+        return "preview" if first_day <= day <= release_day else None
     return "released" if day in (release_day, release_day + dt.timedelta(days=1)) else None
 
 
 def _inflation_phase(ind: InflationIndicator, now: dt.datetime) -> Optional[str]:
-    if ind.upcoming and release_phase(now, ind.upcoming.release):
+    """CPI·PPI는 월 1회라 발표 주 월요일부터 예상치를 미리 보여준다."""
+    if ind.upcoming and release_phase(now, ind.upcoming.release, preview_from_week_start=True):
         # 발표 시각이 지났는데 FRED에 아직 안 올라온 경우도 예상치로 보여준다
         return "preview"
     return "released" if release_phase(now, ind.release) == "released" else None
