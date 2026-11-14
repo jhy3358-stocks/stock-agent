@@ -139,10 +139,12 @@ def test_report_places_macro_section_between_indices_and_us_stocks():
     assert page.index("주요 지수") < page.index("투자지표") < page.index("미국 종목")
     assert "<th>헤드라인<br>전월비</th><td>-</td><td>+0.3%</td>" in page
     assert "전년 동월 지수 미발표" in page
-    assert "5.15% <span class=\"change\">(+5bp, +0.98%)" in page
-    assert "$88.56 <span class=\"change\">(-0.20%)" in page
-    assert "11/13 종가 기준, 전일 종가 5.10" in page  # 재무부 대체값은 날짜만
-    assert "11/14 07:00 KST 기준, 전일 종가 88.74" in page  # 실시간 값은 한국 시각
+    assert "미국채 금리" in page
+    assert '<tr><th>10년</th><td>5.15%</td><td class="up">+5bp (+0.98%)</td><td>5.10%</td></tr>' in page
+    assert "국제 유가" in page
+    assert '<tr><th>WTI</th><td>$88.56</td><td class="down">-0.20%</td><td>$88.74</td></tr>' in page
+    assert "11/13 종가 기준" in page  # 재무부 대체값은 날짜만
+    assert "11/14 07:00 KST 기준" in page  # 실시간 값은 한국 시각
 
 
 def test_report_without_macro_has_no_section():

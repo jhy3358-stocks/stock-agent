@@ -195,13 +195,54 @@ def _rate_card(ind: RateIndicator) -> str:
     </div>"""
 
 
+def _rate_table_card(title: str, items: List[RateIndicator], label_header: str, label) -> str:
+    """같은 종류 지표(미국채 만기별, 유종별)를 한 카드에 한 행씩."""
+
+    def value(ind: RateIndicator) -> str:
+        return f"{ind.value:.2f}%" if ind.unit == "%" else format_price(ind.value, ind.unit)
+
+    def change(ind: RateIndicator) -> str:
+        if ind.unit == "%":
+            return f"{ind.change_bp:+.0f}bp ({ind.change_pct:+.2f}%)"
+        return f"{ind.change_pct:+.2f}%"
+
+    def prev(ind: RateIndicator) -> str:
+        return f"{ind.prev:.2f}%" if ind.unit == "%" else format_price(ind.prev, ind.unit)
+
+    rows = "".join(
+        f'<tr><th>{label(i)}</th><td>{value(i)}</td>'
+        f'<td class="{"up" if i.value >= i.prev else "down"}">{change(i)}</td><td>{prev(i)}</td></tr>'
+        for i in items
+    )
+    # 항목별 시각이 몇 분씩 다를 수 있어 가장 늦은 시각을 대표로 쓴다
+    as_of = max(i.as_of for i in items)
+    return f"""
+    <div class="card wide">
+      <div class="card-title">{title}</div>
+      <div class="table-wrap"><table class="macro nowrap">
+        <tr><th>{label_header}</th><th>{"금리" if items[0].unit == "%" else "가격"}</th><th>전일 대비</th><th>전일 종가</th></tr>
+        {rows}
+      </table></div>
+      <div class="row">{_as_of_text(as_of)}</div>
+    </div>"""
+
+
+OIL_LABELS = {"CL=F": "WTI", "BZ=F": "브렌트유"}
+
+
 def _macro_section(macro: MacroIndicators) -> str:
     if not macro or not (macro.inflation or macro.rates or macro.claims):
         return ""
+    yields = [r for r in macro.rates if r.unit == "%"]
+    oil = [r for r in macro.rates if r.symbol in OIL_LABELS]
+    others = [r for r in macro.rates if r not in yields and r not in oil]
     cards = "\n".join(
         [_inflation_card(i) for i in macro.inflation]
         + ([_claims_card(macro.claims)] if macro.claims else [])
-        + [_rate_card(r) for r in macro.rates]
+        + ([_rate_table_card("미국채 금리", yields, "만기", lambda y: y.name.replace("미국채 ", ""))]
+           if yields else [])
+        + [_rate_card(r) for r in others]
+        + ([_rate_table_card("국제 유가", oil, "유종", lambda o: OIL_LABELS[o.symbol])] if oil else [])
     )
     return f"""
     <section>
@@ -276,6 +317,9 @@ def build_html_report(
   table.macro th, table.macro td {{ padding: 3px 4px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }}
   table.macro tr:first-child th {{ border-top: none; color: var(--muted); font-weight: 500; white-space: normal; vertical-align: bottom; }}
   .table-wrap {{ overflow-x: auto; }}
+  table.macro.nowrap tr:first-child th {{ white-space: nowrap; }}
+  table.macro td.up {{ color: var(--up); }}
+  table.macro td.down {{ color: var(--down); }}
   table.macro th:first-child {{ text-align: left; font-weight: 500; }}
 </style>
 </head>
