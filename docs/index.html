@@ -39,6 +39,9 @@
   table.macro th, table.macro td { padding: 3px 4px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }
   table.macro tr:first-child th { border-top: none; color: var(--muted); font-weight: 500; white-space: normal; vertical-align: bottom; }
   .table-wrap { overflow-x: auto; }
+  table.macro.nowrap tr:first-child th { white-space: nowrap; }
+  table.macro td.up { color: var(--up); }
+  table.macro td.down { color: var(--down); }
   table.macro th:first-child { text-align: left; font-weight: 500; }
 </style>
 </head>
@@ -100,7 +103,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.the-today.com/news/articleView.html?idxno=93559" target="_blank" rel="noopener">[네이버 뉴스] [NZSI INDEX] 2026년 11월 12일… 코스피 -0.61%·코스닥 -1.22% 하락… NZ...</a></li></ul>
+        <ul><li><a href="https://www.koreareport.co.kr/news/articleView.html?idxno=54729" target="_blank" rel="noopener">[네이버 뉴스] 자이로스코프 부품 제조업체 옵토닉스, 17일 코스닥 상장</a></li>
+<li><a href="https://www.the-today.com/news/articleView.html?idxno=93559" target="_blank" rel="noopener">[네이버 뉴스] [NZSI INDEX] 2026년 11월 12일… 코스피 -0.61%·코스닥 -1.22% 하락… NZ...</a></li></ul>
       </div>
     </div></div>
     </section>
@@ -117,22 +121,13 @@
       <div class="row">화살표가 없으면 수정 없음</div>
     </div>
 
-    <div class="card down">
-      <div class="card-title">미국채 2년 <span class="symbol">(2 Yr)</span></div>
-      <div class="price">4.85% <span class="change">(-1bp, -0.25%)</span></div>
-      <div class="row">11/14 07:05 KST 기준, 전일 종가 4.86</div>
-    </div>
-
-    <div class="card up">
-      <div class="card-title">미국채 10년 <span class="symbol">(10 Yr)</span></div>
-      <div class="price">5.14% <span class="change">(+4bp, +0.71%)</span></div>
-      <div class="row">11/14 07:03 KST 기준, 전일 종가 5.10</div>
-    </div>
-
-    <div class="card up">
-      <div class="card-title">미국채 30년 <span class="symbol">(30 Yr)</span></div>
-      <div class="price">5.47% <span class="change">(+4bp, +0.74%)</span></div>
-      <div class="row">11/14 07:05 KST 기준, 전일 종가 5.43</div>
+    <div class="card wide">
+      <div class="card-title">미국채 금리</div>
+      <div class="table-wrap"><table class="macro nowrap">
+        <tr><th>만기</th><th>금리</th><th>전일 대비</th><th>전일 종가</th></tr>
+        <tr><th>2년</th><td>4.85%</td><td class="down">-1bp (-0.25%)</td><td>4.86%</td></tr><tr><th>10년</th><td>5.14%</td><td class="up">+4bp (+0.71%)</td><td>5.10%</td></tr><tr><th>30년</th><td>5.47%</td><td class="up">+4bp (+0.74%)</td><td>5.43%</td></tr>
+      </table></div>
+      <div class="row">11/14 07:05 KST 기준</div>
     </div>
 
     <div class="card up">
@@ -141,16 +136,13 @@
       <div class="row">11/14 06:55 KST 기준, 전일 종가 103.17</div>
     </div>
 
-    <div class="card down">
-      <div class="card-title">WTI 유가 <span class="symbol">(CL=F)</span></div>
-      <div class="price">$88.56 <span class="change">(-0.20%)</span></div>
-      <div class="row">11/14 07:00 KST 기준, 전일 종가 88.74</div>
-    </div>
-
-    <div class="card up">
-      <div class="card-title">브렌트유 <span class="symbol">(BZ=F)</span></div>
-      <div class="price">$96.08 <span class="change">(+0.27%)</span></div>
-      <div class="row">11/14 06:55 KST 기준, 전일 종가 95.82</div>
+    <div class="card wide">
+      <div class="card-title">국제 유가</div>
+      <div class="table-wrap"><table class="macro nowrap">
+        <tr><th>유종</th><th>가격</th><th>전일 대비</th><th>전일 종가</th></tr>
+        <tr><th>WTI</th><td>$88.56</td><td class="down">-0.20%</td><td>$88.74</td></tr><tr><th>브렌트유</th><td>$96.08</td><td class="up">+0.27%</td><td>$95.82</td></tr>
+      </table></div>
+      <div class="row">11/14 07:00 KST 기준</div>
     </div></div>
     </section>
 
@@ -272,8 +264,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="https://www.fool.com/investing/2026/11/14/qualcomm-is-cheap-enough-to-hold-through-2030/" target="_blank" rel="noopener">[Yahoo Finance] Qualcomm Is Cheap Enough to Hold Through 2030</a></li>
-<li><a href="https://news.google.com/rss/articles/CBMizAFBVV95cUxPQzlyMGNqUEVudFIwd2F2dk5qVTJXNjRZM1NkeUpyTWN1MHR6d2w5eVZ4cXZONVVmNkdyTEpnZXhENjFENHJfaW1ONjVFVkM4Qno4aW1keGFZQVVQdGZZS2hqTGVwWmxxd0VBSjdsMDhVVlZ6V2xMc2RkYmZDcjEyWVR5Q1NhMkV3enhVeUtleW4tcFpJc21UcXdnVVotbjVqV0pmSFh4cWRUazdYQ2JMcUNidE9XSkFhNldLOFU1YnhpWks3akIyR3QtX1g?oc=5" target="_blank" rel="noopener">[Bloomberg] Nvidia CEO’s Ouster Puts Singapore’s Business Reputation Under the Spotlight</a></li></ul>
+        <ul><li><a href="https://www.fool.com/investing/2026/11/14/prediction-asml-will-join-the-800-billion-club/" target="_blank" rel="noopener">[Yahoo Finance] Prediction: ASML Will Join the $800 Billion Club in 2029</a></li>
+<li><a href="https://www.tikr.com/blog/nvidias-interim-ceo-pushed-back-on-a-250-billion-credit-backstop-for-openai-oracle-has-the-most-at-stake?ref=yahoofinance&amp;tlnk=yf-261114-v5cmv78g" target="_blank" rel="noopener">[Yahoo Finance] Nvidia’s Interim CEO Pushed Back on a “$250 Billion Credit Backstop” for OpenAI. Oracle Has the Most at Stake</a></li></ul>
       </div>
     </div>
 
@@ -381,7 +373,7 @@
       <div class="price">$1,106.21 <span class="change">(+1.28%)</span></div>
       <div class="row">RSI(14) 76.1</div>
       <div class="row">거래량 1,874,100 (전일대비 -14.9%)</div>
-      <div class="row">적정주가(GRAV) $1,248.74 (괴리율 -11.4%), 적정주가(M-GRAV) $1,145.56 (괴리율 -3.4%), 적정주가(M-GRAV(FCI)) $1,142.72 (괴리율 -3.2%)</div>
+      <div class="row">적정주가(GRAV) $1,248.91 (괴리율 -11.4%), 적정주가(M-GRAV) $1,145.71 (괴리율 -3.4%), 적정주가(M-GRAV(FCI)) $1,142.88 (괴리율 -3.2%)</div>
       
       
       <div class="disclosures">
@@ -413,8 +405,8 @@
       
       <div class="disclosures">
         <div class="disclosures-title">관련 뉴스</div>
-        <ul><li><a href="http://www.osen.co.kr/article/G1112910275" target="_blank" rel="noopener">[네이버 뉴스] 이현이, 집안 대단하네..남편은 S전자→삼촌은 이기성 화백 ‘깜짝’(워...</a></li>
-<li><a href="https://www.edaily.co.kr/News/Read?newsId=02791286645645720&amp;mediaCodeNo=257&amp;utm_source=naver&amp;utm_medium=referral&amp;utm_campaign=news_syndication&amp;utm_content=original_article" target="_blank" rel="noopener">[네이버 뉴스] 홍라희에 &#x27;삼전 1115만주&#x27; 받은 이재용…증여세는 얼마?</a></li></ul>
+        <ul><li><a href="https://www.pinpointnews.co.kr/news/articleView.html?idxno=504100" target="_blank" rel="noopener">[네이버 뉴스] 루닛·뷰노부터 원텍·파마리서치까지… 의료기기주 휘파람</a></li>
+<li><a href="http://www.osen.co.kr/article/G1112910275" target="_blank" rel="noopener">[네이버 뉴스] 이현이, 집안 대단하네..남편은 S전자→삼촌은 이기성 화백 ‘깜짝’(워...</a></li></ul>
       </div>
     </div>
 
@@ -423,7 +415,7 @@
       <div class="price">1,233,000원 <span class="change">(-0.64%)</span></div>
       <div class="row">RSI(14) 41.9</div>
       <div class="row">거래량 3,199,812 (전일대비 -24.5%)</div>
-      <div class="row">적정주가(GRAV) 2,181,425원 (괴리율 -43.5%), 적정주가(M-GRAV) 2,645,243원 (괴리율 -53.4%), 적정주가(M-GRAV(FCI)) 2,663,529원 (괴리율 -53.7%)</div>
+      <div class="row">적정주가(GRAV) 2,181,426원 (괴리율 -43.5%), 적정주가(M-GRAV) 2,645,243원 (괴리율 -53.4%), 적정주가(M-GRAV(FCI)) 2,663,529원 (괴리율 -53.7%)</div>
       
       
       <div class="disclosures">
