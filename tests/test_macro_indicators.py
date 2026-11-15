@@ -132,6 +132,10 @@ def test_report_places_macro_section_between_indices_and_us_stocks():
                 "WTI 유가", "CL=F", 88.56, 88.74,
                 dt.datetime(2026, 11, 13, 17, 0, tzinfo=dt.timezone(dt.timedelta(hours=-5))), "$",
             ),
+            mi.RateIndicator(
+                "금", "GC=F", 3886.30, 3885.30,
+                dt.datetime(2026, 11, 13, 16, 55, tzinfo=dt.timezone(dt.timedelta(hours=-5))), "$",
+            ),
         ],
     )
     page = build_html_report([], [], [], macro=macro)
@@ -143,6 +147,9 @@ def test_report_places_macro_section_between_indices_and_us_stocks():
     assert '<tr><th>10년</th><td>5.15%</td><td class="up">+5bp (+0.98%)</td><td>5.10%</td></tr>' in page
     assert "국제 유가" in page
     assert '<tr><th>WTI</th><td>$88.56</td><td class="down">-0.20%</td><td>$88.74</td></tr>' in page
+    assert "주요 광물 가격" in page
+    assert '<tr><th>금 (oz)</th><td>$3,886.30</td><td class="up">+0.03%</td><td>$3,885.30</td></tr>' in page
+    assert page.index("국제 유가") < page.index("주요 광물 가격")
     assert "11/13 종가 기준" in page  # 재무부 대체값은 날짜만
     assert "11/14 07:00 KST 기준" in page  # 실시간 값은 한국 시각
 

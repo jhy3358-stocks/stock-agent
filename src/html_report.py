@@ -228,6 +228,7 @@ def _rate_table_card(title: str, items: List[RateIndicator], label_header: str, 
 
 
 OIL_LABELS = {"CL=F": "WTI", "BZ=F": "브렌트유"}
+METAL_LABELS = {"GC=F": "금 (oz)", "SI=F": "은 (oz)", "HG=F": "구리 (lb)", "PL=F": "백금 (oz)"}
 
 
 def _macro_section(macro: MacroIndicators) -> str:
@@ -235,7 +236,8 @@ def _macro_section(macro: MacroIndicators) -> str:
         return ""
     yields = [r for r in macro.rates if r.unit == "%"]
     oil = [r for r in macro.rates if r.symbol in OIL_LABELS]
-    others = [r for r in macro.rates if r not in yields and r not in oil]
+    metals = [r for r in macro.rates if r.symbol in METAL_LABELS]
+    others = [r for r in macro.rates if r not in yields and r not in oil and r not in metals]
     cards = "\n".join(
         [_inflation_card(i) for i in macro.inflation]
         + ([_claims_card(macro.claims)] if macro.claims else [])
@@ -243,6 +245,7 @@ def _macro_section(macro: MacroIndicators) -> str:
            if yields else [])
         + [_rate_card(r) for r in others]
         + ([_rate_table_card("국제 유가", oil, "유종", lambda o: OIL_LABELS[o.symbol])] if oil else [])
+        + ([_rate_table_card("주요 광물 가격", metals, "품목", lambda m: METAL_LABELS[m.symbol])] if metals else [])
     )
     return f"""
     <section>
