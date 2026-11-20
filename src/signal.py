@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from config import RSI_PERIOD, VALUATION
+from config import LISTING_PRICES, RSI_PERIOD, VALUATION
 from src.concurrency import safe_call
 from src.formatting import format_price
 from src.growth_data import RSI50_120M_SYMBOLS, growth_fair_value, item_rsi50, required_condition_text
@@ -21,6 +21,7 @@ from src.valuation import (
     m_grav_fci_fair_value,
     target_price,
 )
+from src.yf_data import yahoo_info
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ GROWTH_FV_STAGES = (1, 2)
 
 # GRAV·M-GRAV를 구해도 RSI50 평균가를 함께 표시하는 종목. SPCX는 2026-10 흑자 전환으로
 # GRAV·M-GRAV에 막 넘어와 이력이 짧으니, 이전에 쓰던 추세 기준 값도 나란히 보여준다.
-RSI50_ALONGSIDE_SYMBOLS = {"SPCX"}
+# TSLA는 주가가 미래 사업 기대로 움직여 이익 기반 모델과 차이가 커서 추세 기준 값을 함께 본다.
+RSI50_ALONGSIDE_SYMBOLS = {"SPCX", "TSLA"}
 
 
 @dataclass
@@ -114,7 +116,7 @@ def _rsi50_valuation(item: MarketItem) -> Optional[_Valuation]:
     """RSI50 평균가 적정주가 - GRAV/M-GRAV/Growth FV(1·2단계) 모두 못 구할 때 쓴다.
 
     최근 126거래일 동안 RSI(14)가 50을 지나간 가격들의 평균(교차점이 없으면 역산
-    P50 평균, SPCX/RKLB는 120분봉 RSI 기준)으로, 기업가치가 아니라 추세의 중심 가격이라 라벨에 "추세 기준"을
+    P50 평균, SPCX는 120분봉 RSI 기준)으로, 기업가치가 아니라 추세의 중심 가격이라 라벨에 "추세 기준"을
     밝혀 다른 모델과 구분한다.
     """
     result = item_rsi50(item)
@@ -140,8 +142,11 @@ def _fair_values(item: MarketItem) -> list[_Valuation]:
 
     GRAV·M-GRAV → Growth FV(1·2단계) → RSI50 평균가 순으로, 앞 단계가 하나도
     없을 때만 다음 단계로 넘어간다. 단 RSI50_ALONGSIDE_SYMBOLS 종목은 RSI50 평균가를
-    항상 뒤에 덧붙인다.
+    항상 뒤에 덧붙인다. 신규상장 종목(config.LISTING_PRICES)은 상장가만 쓴다.
     """
+    listing = LISTING_PRICES.get(item.symbol)
+    if listing is not None:
+        return [_Valuation("상장가", listing, gap_pct(item.current_price, listing), "상장가")]
     valuations = _valuations(item)
     if valuations and item.symbol not in RSI50_ALONGSIDE_SYMBOLS:
         return valuations
@@ -149,22 +154,42 @@ def _fair_values(item: MarketItem) -> list[_Valuation]:
     return valuations + [rsi50] if rsi50 is not None else valuations
 
 
+def _analyst_target_text(item: MarketItem) -> Optional[str]:
+    """신규상장 종목에 붙이는 "목표주가(기관 평균 N명) .. (괴리율 ..%)". 조회 실패 시 None."""
+    info = yahoo_info(item.symbol)
+    target, count = info.get("targetMeanPrice"), info.get("numberOfAnalystOpinions")
+    if not target:
+        return None
+    label = f"기관 평균 {count}명" if count else "기관 평균"
+    return (
+        f"목표주가({label}) {format_price(target, item.unit)} "
+        f"(괴리율 {gap_pct(item.current_price, target):+.1f}%)"
+    )
+
+
 def fair_value_line(item: MarketItem) -> str:
-    """리포트에 표시할 적정주가 요약 한 줄: "적정주가(라벨) .. (괴리율 ..%)"를 나란히."""
+    """리포트에 표시할 적정주가 요약 한 줄: "적정주가(라벨) .. (괴리율 ..%)"를 나란히.
+
+    신규상장 종목은 상장가 적정주가 뒤에 애널리스트 목표주가 평균을 덧붙인다.
+    """
     parts = [
         f"적정주가({v.display_label}) {format_price(v.value, item.unit)} (괴리율 {v.gap:+.1f}%){v.suffix}"
         for v in _fair_values(item)
     ]
+    if item.symbol in LISTING_PRICES:
+        target = safe_call(f"{item.symbol} 목표주가 조회", _analyst_target_text, item, default=None)
+        if target:
+            parts.append(target)
     return ", ".join(parts) if parts else "적정주가 데이터 없음"
 
 
 def grav_readiness_line(item: MarketItem) -> Optional[str]:
-    """GRAV·M-GRAV를 아직 못 쓰는 종목(config.VALUATION 미등록: TSLA/SPCX/RKLB 등)이
+    """GRAV·M-GRAV를 아직 못 쓰는 종목(config.VALUATION 미등록)이
     전환 가능한 상태가 되면 리포트에 알림 한 줄을 띄운다. 아니면 None.
 
     g·beta·m_score는 사람이 조사해 config에 넣어야 실제로 GRAV·M-GRAV로 바뀐다.
     """
-    if item.market == "INDEX" or item.symbol in VALUATION:
+    if item.market == "INDEX" or item.symbol in VALUATION or item.symbol in LISTING_PRICES:
         return None
     ready = safe_call(f"{item.symbol} GRAV 전환 가능 여부 확인", grav_readiness, item, default=None)
     if ready is None:

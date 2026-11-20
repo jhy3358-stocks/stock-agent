@@ -199,10 +199,10 @@ def test_valuation_exception_is_isolated(monkeypatch):
 
 
 def test_rsi50_120m_symbol_skips_growth_fv(monkeypatch):
-    # RKLB처럼 RSI50_120M_SYMBOLS에 든 종목은 Growth FV 2단계가 있어도 120분봉 RSI50을 쓴다.
+    # SPCX처럼 RSI50_120M_SYMBOLS에 든 종목은 GRAV가 없을 때 Growth FV 대신 120분봉 RSI50을 쓴다.
     _no_grav(monkeypatch)
     item = _item()
-    item.symbol = "RKLB"
+    item.symbol = "SPCX"
     monkeypatch.setattr(signal, "growth_fair_value", lambda item: (_ for _ in ()).throw(AssertionError("호출되면 안 됨")))
     monkeypatch.setattr(
         signal, "item_rsi50", lambda item: Rsi50Result(100.0, 5, 98.0, False, timeframe="120m")
@@ -238,16 +238,16 @@ def _ready_setup(monkeypatch, symbol, eps, target_pe, beta):
 
 def test_grav_readiness_line_shown_when_inputs_available(monkeypatch):
     # EPS 2 x Target P/E 100 / beta 2 = 100 -> 현재가 110의 범위 안
-    item = _ready_setup(monkeypatch, "RKLB", 2.0, 100.0, 2.0)
+    item = _ready_setup(monkeypatch, "IONQ", 2.0, 100.0, 2.0)
     line = signal.grav_readiness_line(item)
     assert line.startswith("※ GRAV·M-GRAV 전환 가능")
     assert "$100.00" in line
 
 
 def test_grav_readiness_line_hidden_when_eps_negative_or_out_of_band(monkeypatch):
-    assert signal.grav_readiness_line(_ready_setup(monkeypatch, "RKLB", -0.3, 100.0, 2.0)) is None
-    # TSLA처럼 EPS는 양수지만 추정 GRAV(0.34 x 183 / 1.9 = $32.8)가 현재가 1/10 미만
-    item = _ready_setup(monkeypatch, "TSLA", 0.34, 183.0, 1.9)
+    assert signal.grav_readiness_line(_ready_setup(monkeypatch, "IONQ", -0.3, 100.0, 2.0)) is None
+    # EPS는 양수지만 추정 GRAV(0.34 x 183 / 1.9 = $32.8)가 현재가 1/10 미만
+    item = _ready_setup(monkeypatch, "IONQ", 0.34, 183.0, 1.9)
     item.current_price = 355.0
     assert signal.grav_readiness_line(item) is None
 
@@ -255,3 +255,35 @@ def test_grav_readiness_line_hidden_when_eps_negative_or_out_of_band(monkeypatch
 def test_grav_readiness_line_skips_symbols_already_in_valuation(monkeypatch):
     item = _ready_setup(monkeypatch, "NVDA", 2.0, 100.0, 2.0)
     assert signal.grav_readiness_line(item) is None
+
+
+def test_rsi50_shown_alongside_grav_for_tsla(monkeypatch):
+    # TSLA도 GRAV·M-GRAV 뒤에 (일봉) RSI50 평균가를 함께 표시한다.
+    _set_models(monkeypatch, grav=100.0, m_grav=105.0)
+    monkeypatch.setattr(signal, "item_rsi50", lambda item: Rsi50Result(120.0, 5, 118.0, False))
+    item = _item()
+    item.symbol = "TSLA"
+    line = signal.fair_value_line(item)
+    assert line.index("적정주가(GRAV)") < line.index("적정주가(M-GRAV)") < line.index("RSI50 평균가")
+
+
+def test_listing_price_and_analyst_target_for_new_listing(monkeypatch):
+    # 신규상장(ANT)은 상장가 $83을 적정주가로, 기관 목표주가 평균을 목표주가로 표시한다.
+    monkeypatch.setattr(signal, "_valuations", lambda item: (_ for _ in ()).throw(AssertionError("호출되면 안 됨")))
+    monkeypatch.setattr(
+        signal, "yahoo_info", lambda ticker: {"targetMeanPrice": 120.0, "numberOfAnalystOpinions": 6}
+    )
+    item = _item()
+    item.symbol = "ANT"
+    item.current_price = 96.0
+    line = signal.fair_value_line(item)
+    assert line == "적정주가(상장가) $83.00 (괴리율 +15.7%), 목표주가(기관 평균 6명) $120.00 (괴리율 -20.0%)"
+    assert signal.grav_readiness_line(item) is None
+
+
+def test_listing_price_without_analyst_target(monkeypatch):
+    monkeypatch.setattr(signal, "yahoo_info", lambda ticker: {})
+    item = _item()
+    item.symbol = "ANT"
+    item.current_price = 83.0
+    assert signal.fair_value_line(item) == "적정주가(상장가) $83.00 (괴리율 +0.0%)"

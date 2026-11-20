@@ -27,10 +27,15 @@ class MarketItem:
         close: pd.Series,
         volume: Optional[pd.Series],
         unit: str,
+        prev_price: Optional[float] = None,
     ) -> "MarketItem":
-        """종가 시계열의 마지막 두 값으로 현재가·전일대비 등락률을 채운다."""
+        """종가 시계열의 마지막 두 값으로 현재가·전일대비 등락률을 채운다.
+
+        prev_price를 주면 직전 종가 대신 그 값을 기준으로 등락률을 계산한다 (신규상장 첫날).
+        """
         current_price = float(close.iloc[-1])
-        prev_price = float(close.iloc[-2])
+        if prev_price is None:
+            prev_price = float(close.iloc[-2])
         return cls(
             name=name,
             symbol=symbol,

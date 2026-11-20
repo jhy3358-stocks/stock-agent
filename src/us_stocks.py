@@ -1,7 +1,7 @@
 """미국 종목 및 나스닥/S&P500 지수 데이터 수집 (yfinance)."""
 from __future__ import annotations
 
-from config import INDICES, US_STOCKS
+from config import INDICES, LISTING_PRICES, US_STOCKS
 from src.concurrency import fetch_all
 from src.models import MarketItem
 from src.yf_data import price_history
@@ -9,7 +9,11 @@ from src.yf_data import price_history
 
 def _fetch(ticker: str, name: str, market: str, unit: str) -> MarketItem:
     history = price_history(ticker, period="6mo", interval="1d")
-    return MarketItem.from_close(name, ticker, market, history["Close"], history["Volume"], unit)
+    # 상장 첫날처럼 시세가 하루치뿐이면 전일 종가 대신 상장가(공모가) 대비로 등락률을 낸다
+    prev_price = LISTING_PRICES.get(ticker) if len(history) < 2 else None
+    return MarketItem.from_close(
+        name, ticker, market, history["Close"], history["Volume"], unit, prev_price=prev_price
+    )
 
 
 def _fetch_many(names: dict, market: str, unit: str) -> list[MarketItem]:

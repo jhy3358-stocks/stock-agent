@@ -18,7 +18,7 @@ US_STOCKS = {
     "MU": "마이크론",
     "SKHY": "SK하이닉스(나스닥)",
     "SPCX": "스페이스X",
-    "RKLB": "로켓랩",
+    "ANT": "앤트로픽",
     "LLY": "일라이릴리",
     "COST": "코스트코",
 }
@@ -60,7 +60,7 @@ BLOOMBERG_NEWS_NAMES = {
     "MU": "Micron",
     "SKHY": "SK Hynix",
     "SPCX": "SpaceX",
-    "RKLB": "Rocket Lab",
+    "ANT": "Anthropic",
     "LLY": "Lilly",
     "COST": "Costco",
 }
@@ -128,9 +128,10 @@ VALUATION = {
     "META": {"growth_rate": 18.43, "beta": 1.243},
     "MSFT": {"growth_rate": 18.29, "beta": 1.099},
     "NVDA": {"growth_rate": 61.95, "beta": 2.215},
-    # TSLA(테슬라): 주가가 현재 이익보다 로보택시·옵티머스 등 미래 사업 기대로 움직여
-    # 이익 x 멀티플 모델이 맞지 않는다(2026-09 영업이익 EPS $0.34 -> GRAV $49 vs 현재가 $372).
-    # GRAV/M-GRAV에서 빼고 RSI50 평균가(추세 기준)로 표시한다. Growth FV 가정은 두지 않음.
+    # TSLA(테슬라): 주가가 미래 사업(로보택시·옵티머스) 기대로 움직여 이익 x 멀티플 모델이
+    # 현재가보다 크게 낮게 나오므로, 2026-11-20부터 GRAV·M-GRAV를 RSI50 평균가와 함께 표시한다
+    # (src/signal.py RSI50_ALONGSIDE_SYMBOLS). g=Finviz EPS next 5Y, beta=Finviz (2026-11-20 조사).
+    "TSLA": {"growth_rate": 19.79, "beta": 1.73},
     "MU": {"growth_rate": 173.61, "beta": 2.213},
     "SKHY": {"growth_rate": 109.12, "beta": 2.395},
     # SPCX(스페이스X): Q3 2026 흑자 전환 후 GRAV/M-GRAV로 전환 (2026-10-27).
@@ -139,10 +140,6 @@ VALUATION = {
     "SPCX": {"growth_rate": 58.0, "beta": 1.2},
     "LLY": {"growth_rate": 30.55, "beta": 0.45},   # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
     "COST": {"growth_rate": 11.03, "beta": 0.88},  # Finviz(EPS next 5Y/Beta), 2026-09-25 기준 조사
-    # RKLB(로켓랩): forward EPS가 소스마다 부호가 엇갈리고(Yahoo +0.046 vs
-    # Finviz 내년 EPS -0.04) EPS next 5Y 자체가 없어(적자 기업) GRAV에 넣지
-    # 않는다. TTM EBITDA 마진이 아직 음수라 Growth FV 2단계로 라우팅됨
-    # (config/growth_assumptions.yaml 참고).
 }
 
 # M-GRAV(해자 반영 GRAV) 모델 입력값.
@@ -185,7 +182,7 @@ M_GRAV = {
     "META": {"target_pe": 23.0, "m_score": 73, "m_score_fci": 72},    # SNS 네트워크효과 강하나 광고 플랫폼 자체 전환장벽은 중간
     "MSFT": {"target_pe": 30.0, "m_score": 88, "m_score_fci": 90},    # Office/Windows/Azure 전방위 엔터프라이즈 락인, OPM 최상위권
     "NVDA": {"target_pe": 35.0, "m_score": 94, "m_score_fci": 98},    # CUDA 생태계 독점적 락인 + AI GPU 시장점유율, 진입장벽/OPM 모두 최상위
-    # TSLA: VALUATION에서 제외 (위 주석 참고). 이전 m_score 45.
+    "TSLA": {"target_pe": None, "m_score": 45, "m_score_fci": 51},    # EV 점유율 하락, FSD·배터리 기술력 / OPM 4% 수준으로 얇음 (m_score_by_stock.csv 산정값). target_pe는 라이브 forward PE 사용
     "MU": {"target_pe": 12.0, "m_score": 79, "m_score_fci": 87},      # 메모리 3강 중 기술격차 상대적으로 작아 SK하이닉스보다 해자 약함
     "SKHY": {"target_pe": 12.0, "m_score": 87, "m_score_fci": 93},    # SK하이닉스(ADR), 000660과 동일 기업
 
@@ -194,5 +191,12 @@ M_GRAV = {
     "COST": {"target_pe": 35.0, "m_score": 63, "m_score_fci": 66},    # 멤버십 갱신율(~90%+)에서 오는 행동적 락인은 최상위권이나 마진 자체는 유통업 특성상 얇음(EBITDA 5%)
     # --- 2026-10-27 추가 ---
     "SPCX": {"target_pe": None, "m_score": 69, "m_score_fci": 56},    # 기술독점 24(발사·Starlink) + 락인 15 + OPM 7(최근 4분기 0~10%, Q3 단독 19%) + 진입장벽 23. target_pe는 라이브 forward PE 사용
-    # RKLB: VALUATION에 g/beta가 없어 M-GRAV도 계산 불가 (120분봉 RSI50 평균가로 대체, src/signal.py 참고).
+}
+
+# 신규상장으로 이익·주가 이력이 없어 적정주가 모델을 못 쓰는 종목은 상장가(공모가)를
+# 적정주가로 표시하고, 애널리스트 목표주가 평균(Yahoo targetMeanPrice)을 목표주가로 함께
+# 보여준다 (src/signal.py). 상장 첫날처럼 시세가 하루치뿐이면 전일 종가 대신 이 값으로
+# 등락률을 계산한다 (src/us_stocks.py).
+LISTING_PRICES = {
+    "ANT": 83.0,  # 앤트로픽: 2026-11-19 나스닥 상장, 공모가 $83
 }

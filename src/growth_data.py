@@ -41,8 +41,7 @@ logger = logging.getLogger(__name__)
 _UNIT_M = 1_000_000.0
 
 # 적정주가를 120분봉 RSI(14) 기준 RSI50 평균가(최근 126거래일)로 쓰는 종목 (2026-10-18 요청).
-# RKLB는 Growth FV(2단계) 가정값이 config에 있지만 적정주가에는 쓰지 않는다 (src/signal.py).
-RSI50_120M_SYMBOLS = {"SPCX", "RKLB"}
+RSI50_120M_SYMBOLS = {"SPCX"}
 # 미국 정규장 시작(09:30 ET)부터 120분 단위로 묶는다: 09:30/11:30/13:30/15:30(30분짜리) 하루 4봉
 _SESSION_OPEN_MIN = 9 * 60 + 30
 _BAR_MIN = 120
