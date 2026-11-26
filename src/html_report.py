@@ -89,6 +89,16 @@ def _revision_text(first, revised) -> str:
     return f"{_signed(first, '%')} → {_signed(revised, '%')}"
 
 
+def _vs_consensus(actual, consensus, digits: int = 1) -> str:
+    """발표치가 예상치 대비 상회/하회/부합. 표시 자릿수로 반올림해 비교한다."""
+    if actual is None or consensus is None:
+        return ""
+    diff = round(actual, digits) - round(consensus, digits)
+    if abs(diff) < 10 ** -(digits + 3):
+        return ' <span class="vs">(부합)</span>'
+    return ' <span class="vs up">(상회)</span>' if diff > 0 else ' <span class="vs down">(하회)</span>'
+
+
 def _inflation_preview_card(ind: InflationIndicator) -> str:
     """발표일 발표 전: 이번 발표 예상치와 직전 발표치."""
     up = ind.upcoming
@@ -119,7 +129,7 @@ def _inflation_card(ind: InflationIndicator) -> str:
     for line in ind.lines:
         body += (
             f"<tr><th>{line.label}<br>전월비</th><td>{_signed(line.consensus_mom, '%')}</td>"
-            f"<td>{_signed(line.mom, '%')}</td>"
+            f"<td>{_signed(line.mom, '%')}{_vs_consensus(line.mom, line.consensus_mom)}</td>"
             f"<td>{_revision_text(line.prev_first_mom, line.prev_mom)}</td></tr>"
             f"<tr><th>{line.label}<br>전년비</th><td>-</td>"
             f"<td>{_signed(line.yoy, '%')}</td>"
@@ -159,7 +169,7 @@ def _claims_card(ind: ClaimsIndicator) -> str:
     return f"""
     <div class="card {direction}">
       {title}
-      <div class="price">{ind.value:,.0f}건 <span class="change">({ind.change:+,.0f}건, {ind.change_pct:+.2f}%)</span></div>
+      <div class="price">{ind.value:,.0f}건{_vs_consensus(ind.value, ind.consensus, -3)} <span class="change">({ind.change:+,.0f}건, {ind.change_pct:+.2f}%)</span></div>
       <div class="row">예상 {_count(ind.consensus)}, 전주 {ind.prev:,.0f}건</div>
       <div class="row">{ind.week_end:%m/%d} 마감 주간 · {_kst(ind.release)} 발표</div>
     </div>"""
@@ -322,6 +332,9 @@ def build_html_report(
   .table-wrap {{ overflow-x: auto; }}
   table.macro.nowrap tr:first-child th {{ white-space: nowrap; }}
   table.macro td.up {{ color: var(--up); }}
+  .vs {{ font-size: .75rem; color: var(--muted); }}
+  .vs.up {{ color: var(--up); }}
+  .vs.down {{ color: var(--down); }}
   table.macro td.down {{ color: var(--down); }}
   table.macro th:first-child {{ text-align: left; font-weight: 500; }}
 </style>

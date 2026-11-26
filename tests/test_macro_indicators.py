@@ -236,7 +236,7 @@ def test_initial_claims_latest_week_vs_previous(monkeypatch):
 
     ind.phase = "released"
     page = build_html_report([], [], [], macro=mi.MacroIndicators([], [], ind))
-    assert "200,000건 <span class=\"change\">(+9,000건, +4.71%)" in page
+    assert "200,000건 <span class=\"vs up\">(상회)</span> <span class=\"change\">(+9,000건, +4.71%)" in page
     assert "예상 194,000건, 전주 191,000건" in page
     assert "11/07 마감 주간 · 11/12 22:30 KST 발표" in page
 
@@ -285,3 +285,53 @@ def test_inflation_phase_prefers_upcoming_preview():
     assert mi._inflation_phase(ind, _kst(2026, 12, 4, 21, 30)) is None
     # 발표 시각이 지났는데 FRED가 아직 갱신 전이면 계속 예상치로
     assert mi._inflation_phase(ind, _kst(2026, 12, 11, 8, 0)) == "preview"
+
+
+def test_pce_uses_sa_series_for_yoy_and_late_month_vintage(monkeypatch):
+    sep25, aug, sep, oct_ = (dt.date(2025, 10, 1), dt.date(2026, 8, 1),
+                             dt.date(2026, 9, 1), dt.date(2026, 10, 1))
+    current = [(sep25, 128.0), (dt.date(2025, 10, 1), 128.0), (aug, 131.625),
+               (sep, 132.283), (oct_, 132.703)]
+    first = [(aug, 131.611), (sep, 132.257)]  # 9월이 최신이던 시점(11/20) 값
+    fetched, vintages = [], []
+    monkeypatch.setattr(mi, "_fred_series", lambda sid, start: fetched.append(sid) or current)
+    monkeypatch.setattr(mi, "_alfred_series",
+                        lambda sid, start, vintage: vintages.append(vintage) or first)
+    consensus = {"PCE": {"2026-10": {"release": "2026-11-25T08:30:00-05:00", "근원": 0.3}}}
+
+    ind = mi._inflation_indicator("PCE", dt.date(2026, 11, 26), consensus)
+
+    assert sorted(fetched) == ["PCEPI", "PCEPILFE"]  # 같은 시리즈는 한 번만 조회
+    assert set(vintages) == {dt.date(2026, 11, 20)}
+    head, core = ind.lines
+    assert ind.month == oct_ and round(head.yoy, 2) == round((132.703 / 128.0 - 1) * 100, 2)
+    assert round(head.prev_first_mom, 2) == 0.49 and round(head.prev_mom, 2) == 0.50
+    assert head.consensus_mom is None and core.consensus_mom == 0.3
+
+
+def test_merge_consensus_maps_pce_events():
+    events = [
+        {"title": "Core PCE Price Index m/m", "country": "USD",
+         "date": "2026-11-25T08:30:00-05:00", "forecast": "0.3%"},
+    ]
+    assert mi.merge_consensus({}, events) == {
+        "PCE": {"2026-10": {"release": "2026-11-25T08:30:00-05:00", "근원": 0.3}}
+    }
+
+
+def test_released_card_marks_beat_or_miss_vs_consensus():
+    from src.html_report import _vs_consensus
+    assert "상회" in _vs_consensus(0.36, 0.3)  # 표시값 +0.4% > +0.3%
+    assert "부합" in _vs_consensus(0.29, 0.3)  # 표시값 +0.3% = +0.3%
+    assert "하회" in _vs_consensus(0.24, 0.3)
+    assert _vs_consensus(0.3, None) == "" and _vs_consensus(None, 0.3) == ""
+    assert "상회" in _vs_consensus(203000.0, 201000.0, -3)  # 실업수당(천 건 단위)
+
+    ind = mi.InflationIndicator(
+        "PCE", dt.date(2026, 10, 1),
+        [mi.InflationLine("헤드라인", 0.32, 3.8), mi.InflationLine("근원", 0.24, 3.3, consensus_mom=0.3)],
+        prev_month=dt.date(2026, 9, 1), phase="released",
+    )
+    page = build_html_report([], [], [], macro=mi.MacroIndicators([ind], []))
+    assert '<td>+0.2% <span class="vs down">(하회)</span></td>' in page
+    assert "<td>+0.3%</td>" in page  # 예상치 없으면 표시 안 함

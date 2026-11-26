@@ -1,6 +1,6 @@
-"""투자지표(미국 물가·국채 금리·달러 인덱스·유가·광물) 수집.
+"""투자지표(미국 물가(CPI/PPI/PCE)·국채 금리·달러 인덱스·유가·광물) 수집.
 
-- 물가(CPI/PPI): FRED 공개 CSV(API 키 불필요). 월간 지표라 가장 최근 발표월 값을 보여준다.
+- 물가(CPI/PPI/PCE): FRED 공개 CSV(API 키 불필요). 월간 지표라 가장 최근 발표월 값을 보여준다.
   BLS 발표 관행대로 전월비는 계절조정(SA), 전년비는 원계열(NSA) 시리즈로 계산한다.
   가장 최근 발표월은 예상치(시장 컨센서스, ForexFactory)와 속보치를, 그 전월은 속보치(ALFRED
   vintage로 처음 발표된 값)와 수정치(현재 값)를 함께 보여준다. PPI는 발표 후 4개월간 수정되고,
@@ -8,11 +8,14 @@
   다를 수 있다.
     CPI 헤드라인 CPIAUCSL / CPIAUCNS, 근원(식품·에너지 제외) CPILFESL / CPILFENS
     PPI 헤드라인(최종수요) PPIFIS / PPIFID, 근원(식품·에너지 제외) PPIFES / PPICOR
+    PCE 헤드라인 PCEPI, 근원(식품·에너지 제외) PCEPILFE. BEA는 계절조정 계열만 내고 전년비도
+    계절조정 계열로 계산해 발표하므로 전월비·전년비 모두 같은 시리즈를 쓴다. 대상월 다음 달
+    말에 발표되고, 매월 발표 때 직전 달들이 수정된다. 예상치는 ForexFactory에 근원만 있다.
 - 신규 실업수당 청구 건수: FRED ICSA(주간, 계절조정). 매주 목요일 발표되는 직전 주(토요일
   마감) 값과 전주 대비 증감, 예상치(ForexFactory)를 보여준다.
 - 물가·실업수당은 발표일(한국 날짜) 리포트(발표 전: 예상치)와 그다음 날 리포트(발표치)에만
-  넣는다. CPI·PPI 예상치는 발표 주 월요일부터 보여준다(실업수당은 매주라 발표일만). 발표 시각은 ForexFactory 일정에서 받고(컨센서스 캐시에 함께 저장), 실업수당은 일정을
-  못 받으면 목요일 08:30(미 동부)으로 본다. CPI·PPI는 일정을 못 받으면 표시하지 않는다.
+  넣는다. CPI·PPI·PCE 예상치는 발표 주 월요일부터 보여준다(실업수당은 매주라 발표일만). 발표 시각은 ForexFactory 일정에서 받고(컨센서스 캐시에 함께 저장), 실업수당은 일정을
+  못 받으면 목요일 08:30(미 동부)으로 본다. CPI·PPI·PCE는 일정을 못 받으면 표시하지 않는다.
 - 국채 금리(2년/10년/30년): 리포트 발송 시점의 실시간 값을 CNBC 시세(US2Y/US10Y/US30Y)로
   받는다. 국채는 아시아·유럽 시간에도 거래돼 한국 시간 08:00/17:00/21:30 어느 때든 그 시점
   금리가 나온다. Yahoo는 2년물 금리 티커가 없어 쓰지 않는다. CNBC 조회가 실패하면 미 재무부
@@ -57,7 +60,11 @@ ET = ZoneInfo("America/New_York")
 INFLATION_SERIES = {
     "CPI": (("헤드라인", "CPIAUCSL", "CPIAUCNS"), ("근원", "CPILFESL", "CPILFENS")),
     "PPI": (("헤드라인", "PPIFIS", "PPIFID"), ("근원", "PPIFES", "PPICOR")),
+    "PCE": (("헤드라인", "PCEPI", "PCEPI"), ("근원", "PCEPILFE", "PCEPILFE")),
 }
+# 속보치 vintage: 대상월 month가 최신 관측월이던 날 = (month + 개월 수)의 일자.
+# CPI·PPI는 다음 달 중순 발표라 다음 달 25일, PCE는 다음 달 말 발표라 다다음 달 20일.
+FIRST_RELEASE_VINTAGE = {"CPI": (1, 25), "PPI": (1, 25), "PCE": (2, 20)}
 
 # 재무부 CSV 컬럼명 -> 표시명
 TREASURY_TENORS = {"2 Yr": "미국채 2년", "10 Yr": "미국채 10년", "30 Yr": "미국채 30년"}
@@ -209,18 +216,22 @@ def _change(rows: List[tuple[dt.date, float]], month: dt.date, months_back: int)
     return _pct(cur, base) if cur and base else None
 
 
-def _first_release_rows(series_id: str, month: dt.date, start: dt.date) -> List[tuple[dt.date, float]]:
-    """month가 가장 최근 관측월이던 시점의 값. month는 보통 다음 달 중순에 발표되고 그다음 달은
-    그 다음 달 중순에 나오므로, 발표 다음 달 25일 vintage를 쓴다. 발표가 밀려 그 vintage의
+def _first_release_rows(
+    series_id: str, month: dt.date, start: dt.date, name: str = "CPI"
+) -> List[tuple[dt.date, float]]:
+    """month가 가장 최근 관측월이던 시점의 값. CPI·PPI의 month는 보통 다음 달 중순에 발표되고
+    그다음 달은 그 다음 달 중순에 나오므로 발표 다음 달 25일 vintage를, PCE는 다음 달 말에
+    발표되므로 다다음 달 20일 vintage를 쓴다(FIRST_RELEASE_VINTAGE). 발표가 밀려 그 vintage의
     마지막 관측월이 month가 아니면 속보치를 알 수 없어 빈 값을 돌려준다."""
-    vintage = _add_months(month, 1).replace(day=25)
+    months, day = FIRST_RELEASE_VINTAGE[name]
+    vintage = _add_months(month, months).replace(day=day)
     rows = _alfred_series(series_id, start, vintage)
     return rows if rows[-1][0] == month else []
 
 
 def _inflation_indicator(name: str, today: dt.date, consensus: dict) -> InflationIndicator:
     start = dt.date(today.year - 2, 1, 1)
-    ids = [sid for _, sa, nsa in INFLATION_SERIES[name] for sid in (sa, nsa)]
+    ids = list(dict.fromkeys(sid for _, sa, nsa in INFLATION_SERIES[name] for sid in (sa, nsa)))
     current = fetch_all(ids, lambda sid: _fred_series(sid, start), what="FRED 물가", default=[])
     # 기준월: 헤드라인 SA 시리즈의 가장 최근 관측월 (시리즈끼리 발표월이 같다)
     head_sa = current[INFLATION_SERIES[name][0][1]]
@@ -229,7 +240,7 @@ def _inflation_indicator(name: str, today: dt.date, consensus: dict) -> Inflatio
     month = head_sa[-1][0]
     prev_month = _add_months(month, -1)
     first = fetch_all(
-        ids, lambda sid: _first_release_rows(sid, prev_month, start),
+        ids, lambda sid: _first_release_rows(sid, prev_month, start, name),
         what="ALFRED 물가 속보치", default=[],
     )
 
@@ -282,6 +293,8 @@ FF_EVENTS = {
     "Core CPI m/m": ("CPI", "근원"),
     "PPI m/m": ("PPI", "헤드라인"),
     "Core PPI m/m": ("PPI", "근원"),
+    "PCE Price Index m/m": ("PCE", "헤드라인"),
+    "Core PCE Price Index m/m": ("PCE", "근원"),
 }
 CONSENSUS_CACHE_PATH = Path(__file__).resolve().parent.parent / "data" / "consensus_cache.json"
 
@@ -401,7 +414,7 @@ def release_phase(
 
 
 def _inflation_phase(ind: InflationIndicator, now: dt.datetime) -> Optional[str]:
-    """CPI·PPI는 월 1회라 발표 주 월요일부터 예상치를 미리 보여준다."""
+    """CPI·PPI·PCE는 월 1회라 발표 주 월요일부터 예상치를 미리 보여준다."""
     if ind.upcoming and release_phase(now, ind.upcoming.release, preview_from_week_start=True):
         # 발표 시각이 지났는데 FRED에 아직 안 올라온 경우도 예상치로 보여준다
         return "preview"
