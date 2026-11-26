@@ -49,6 +49,11 @@ def build_report_sections(
 # 카카오톡 "나에게 보내기" 기본 텍스트 템플릿은 글자수 200자 제한이 있어,
 # 전체 상세는 GitHub Pages에 게시하고(build_report_sections/html_report 참고),
 # 카카오톡에는 지수/등락 상위·하위 종목만 담은 요약 1건만 보낸다.
+def _futures_text(item: MarketItem) -> str:
+    """카카오 요약의 지수 선물 등락(장 마감 후). 예: '(선물+0.7%)'."""
+    return f"(선물{item.extended.change_pct:+.1f}%)" if item.extended else ""
+
+
 def build_kakao_summary(
     kr_stocks: List[MarketItem],
     us_stocks: List[MarketItem],
@@ -63,7 +68,7 @@ def build_kakao_summary(
     gainers = sorted(all_stocks, key=lambda i: i.change_pct, reverse=True)[:top_n]
     losers = sorted(all_stocks, key=lambda i: i.change_pct)[:top_n]
 
-    index_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in indices)
+    index_line = " ".join(f"{i.name}{i.change_pct:+.1f}%{_futures_text(i)}" for i in indices)
     gainer_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in gainers)
     loser_line = " ".join(f"{i.name}{i.change_pct:+.1f}%" for i in losers)
 

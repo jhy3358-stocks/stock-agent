@@ -1,10 +1,21 @@
 """공통 데이터 모델."""
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
+
+
+@dataclass
+class ExtendedQuote:
+    """정규장 마감 후 시세 (src/extended_hours.py)."""
+
+    label: str  # "시간외" / "S&P500 선물" 등
+    change_pct: float  # 정규장 종가(지수는 정규장 마감 시점 선물 가격) 대비
+    as_of: dt.datetime
+    price: Optional[float] = None  # 종목 시간외 가격. 지수(선물)는 수준이 달라 쓰지 않는다
 
 
 @dataclass
@@ -17,6 +28,7 @@ class MarketItem:
     current_price: float
     change_pct: float
     unit: str  # "원" | "$" | "pt"
+    extended: Optional[ExtendedQuote] = None  # 시간외(종목)·선물(지수) 등락
 
     @classmethod
     def from_close(

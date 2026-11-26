@@ -36,6 +36,19 @@ def _link_list_html(title: str, entries: List[dict], prefix: Callable[[dict], st
       </div>"""
 
 
+def _extended_row(item: MarketItem) -> str:
+    """정규장 마감 후 시세 한 줄. 종목은 시간외 가격, 지수는 선물 등락률만."""
+    ext = item.extended
+    if ext is None:
+        return ""
+    direction = "up" if ext.change_pct >= 0 else "down"
+    if ext.price is not None:
+        text = f"{ext.label} {format_price(ext.price, item.unit)} ({ext.change_pct:+.2f}%)"
+    else:
+        text = f"시간외({ext.label}) {ext.change_pct:+.2f}%"
+    return f'<div class="row"><span class="ext {direction}">{text}</span> · {_kst(ext.as_of)}</div>'
+
+
 def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> str:
     direction = "up" if item.change_pct >= 0 else "down"
     valuation_rows = ""
@@ -54,6 +67,7 @@ def _item_card(item: MarketItem, disclosures: List[dict], news: List[dict]) -> s
     <div class="card {direction}">
       <div class="card-title">{item.name} <span class="symbol">({item.symbol})</span></div>
       <div class="price">{format_price(item.current_price, item.unit)} <span class="change">({item.change_pct:+.2f}%)</span></div>
+      {_extended_row(item)}
       <div class="row">RSI({RSI_PERIOD}) {rsi_text(item)}</div>
       <div class="row">{volume_text(item)}</div>{valuation_rows}
       {_link_list_html("최근 공시", disclosures, lambda d: d["date"].strftime("%m/%d"))}
@@ -333,6 +347,8 @@ def build_html_report(
   table.macro.nowrap tr:first-child th {{ white-space: nowrap; }}
   table.macro td.up {{ color: var(--up); }}
   .vs {{ font-size: .75rem; color: var(--muted); }}
+  .ext.up {{ color: var(--up); }}
+  .ext.down {{ color: var(--down); }}
   .vs.up {{ color: var(--up); }}
   .vs.down {{ color: var(--down); }}
   table.macro td.down {{ color: var(--down); }}
